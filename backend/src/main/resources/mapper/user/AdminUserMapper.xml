@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.user.mapper.AdminUserMapper">
+
+    <!--
+      角色用标量子查询取，不用 JOIN sys_user_role：
+      一个用户理论上可以挂多个角色，JOIN 会让他在列表里出现多行，分页总数也跟着翻倍。
+      子查询固定 LIMIT 1，配合「本系统一人一角色」的约定。
+    -->
+    <sql id="UserColumns">
+        u.id,
+        u.username,
+        u.real_name,
+        u.phone,
+        u.email,
+        u.avatar,
+        u.credit_score,
+        u.credit_level,
+        (SELECT r.role_code FROM sys_user_role ur
+           JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0
+          WHERE ur.user_id = u.id LIMIT 1)                              AS role_code,
+        (SELECT r.role_name FROM sys_user_role ur
+           JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0
+          WHERE ur.user_id = u.id LIMIT 1)                              AS role_name,
+        u.store_id,
+        s.store_name,
+        u.status,
+        u.last_login_time,
+        u.create_time,
+
+        /* 订单数不含已取消；消费额不含待支付与已取消（待支付是没到账的钱） */
+        (SELECT COUNT(*) FROM lease_order o
+          WHERE o.user_id = u.id AND o.deleted = 0 AND o.status &lt;&gt; 'CANCELLED')
+                                                                        AS order_count,
+        (SELECT COUNT(*) FROM lease_order o
+          WHERE o.user_id = u.id AND o.deleted = 0 AND o.status = 'COMPLETED')
+                                                                        AS finished_count,
+        (SELECT COUNT(*) FROM lease_order o
+          WHERE o.user_id = u.id AND o.deleted = 0
+            AND o.status IN ('WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE'))
+                                                                        AS active_count,
+        (SELECT COALESCE(SUM(o.total_amount), 0) FROM lease_order o
+          WHERE o.user_id = u.id AND o.deleted = 0
+            AND o.status NOT IN ('CANCELLED', 'WAIT_PAY'))              AS total_spend
+    </sql>
+
+    <select id="selectUserPage" resultType="com.zuche.module.user.vo.AdminUserVO">
+        SELECT
+        <include refid="UserColumns"/>
+        FROM sys_user u
+        LEFT JOIN store s ON s.id = u.store_id AND s.deleted = 0
+        WHERE u.deleted = 0
+        <if test="q.status != null">
+            AND u.status = #{q.status}
+        </if>
+        <if test="q.level != null and q.level != ''">
+            AND u.credit_level = #{q.level}
+        </if>
+        <if test="q.roleCode != null and q.roleCode != ''">
+            AND EXISTS (
+                SELECT 1 FROM sys_user_role ur
+                  JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0
+                 WHERE ur.user_id = u.id AND r.role_code = #{q.roleCode}
+            )
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (
+                u.username LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.real_name LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.phone LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.email LIKE CONCAT('%', #{q.keyword}, '%')
+            )
+        </if>
+        ORDER BY u.create_time DESC, u.id DESC
+    </select>
+
+    <select id="selectUserById" resultType="com.zuche.module.user.vo.AdminUserVO">
+        SELECT
+        <include refid="UserColumns"/>
+        FROM sys_user u
+        LEFT JOIN store s ON s.id = u.store_id AND s.deleted = 0
+        WHERE u.deleted = 0 AND u.id = #{id}
+    </select>
+
+    <!--
+      统计：一条 SQL 出六个数字。
+      角色计数必须再 join 一次 sys_user 过滤 deleted，否则会把已注销账号算进去。
+    -->
+    <select id="selectStats" resultType="com.zuche.module.user.vo.AdminUserStatsVO">
+        SELECT
+            COUNT(*)                                                        AS total,
+            COALESCE(SUM(u.status = 1), 0)                                  AS normal,
+            COALESCE(SUM(u.status = 0), 0)                                  AS frozen,
+            (SELECT COUNT(*) FROM sys_user_role ur
+               JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0
+               JOIN sys_user cu ON cu.id = ur.user_id AND cu.deleted = 0
+              WHERE r.role_code = 'USER')                                   AS customers,
+            (SELECT COUNT(*) FROM sys_user_role ur
+               JOIN sys_role r ON r.id = ur.role_id AND r.deleted = 0
+               JOIN sys_user su ON su.id = ur.user_id AND su.deleted = 0
+              WHERE r.role_code = 'STORE_ADMIN')                            AS store_admins,
+            COALESCE(SUM(u.create_time &gt;= DATE_FORMAT(CURDATE(), '%Y-%m-01')), 0) AS month_new
+        FROM sys_user u
+        WHERE u.deleted = 0
+    </select>
+
+    <select id="countActiveByRole" resultType="int">
+        SELECT COUNT(*)
+          FROM sys_user u
+          JOIN sys_user_role ur ON ur.user_id = u.id
+          JOIN sys_role r       ON r.id = ur.role_id AND r.deleted = 0
+         WHERE u.deleted = 0 AND u.status = 1 AND r.role_code = #{roleCode}
+    </select>
+
+</mapper>

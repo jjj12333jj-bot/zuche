@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
+
 /**
  * 认证服务：登录、注册、当前用户
  *
@@ -49,6 +51,14 @@ public class AuthService {
 
         String roleCode = roleOf(user.getId());
         String token = jwtUtil.createToken(user.getId(), user.getUsername(), roleCode, user.getStoreId());
+
+        // 记录最近登录时间：后台「用户管理」要靠它判断账号是否还活跃。
+        // 放在签发 token 之后、返回之前，登录失败时不会留下脏时间。
+        SysUser touch = new SysUser();
+        touch.setId(user.getId());
+        touch.setLastLoginTime(LocalDateTime.now());
+        userMapper.updateById(touch);
+
         log.info("用户登录成功: {} ({})", user.getUsername(), roleCode);
         return buildLoginVO(user, roleCode, token);
     }

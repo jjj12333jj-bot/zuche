@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.order.mapper.AdminOrderMapper">
+
+    <!--
+      平台订单列：与用户端 LeaseOrderMapper.ListColumns 的区别
+        1. 不带 user_id 过滤（平台看全量）
+        2. 多取归还网点、逾期天数，平台最关心「谁在流血」
+        3. 客户信息直接 LEFT JOIN sys_user 取，不再走 EXISTS 子查询
+
+      车辆名仍然用 GROUP_CONCAT 一次取回，不为 N 条订单再查 N 次明细。
+    -->
+    <sql id="AdminColumns">
+        o.id,
+        o.order_no,
+        o.status,
+        o.store_id,
+        s.store_name,
+        o.return_store_id,
+        rs.store_name                                       AS return_store_name,
+        o.start_date,
+        o.end_date,
+        o.rent_days,
+        o.vehicle_count,
+        o.rent_amount,
+        o.deposit_amount,
+        o.total_amount,
+        o.credit_level_snapshot,
+        o.deposit_coefficient,
+        o.overdue_days,
+        o.create_time,
+        o.pay_time,
+        u.username                                          AS customer_username,
+        u.real_name                                         AS customer_name,
+        u.phone                                             AS customer_phone,
+        (SELECT GROUP_CONCAT(oi.vehicle_name SEPARATOR ' / ')
+           FROM order_item oi WHERE oi.order_id = o.id)     AS vehicle_names,
+        (SELECT COALESCE(vi.image_url, m2.cover_image)
+           FROM order_item oi
+           JOIN vehicle v        ON v.id = oi.vehicle_id
+           JOIN vehicle_model m2 ON m2.id = v.model_id
+           LEFT JOIN vehicle_image vi ON vi.vehicle_id = v.id
+          WHERE oi.order_id = o.id
+          ORDER BY oi.id, vi.sort_no, vi.id
+          LIMIT 1)                                          AS cover_image,
+        (SELECT oi.vehicle_id FROM order_item oi
+          WHERE oi.order_id = o.id ORDER BY oi.id LIMIT 1)  AS first_vehicle_id
+    </sql>
+
+    <select id="selectAdminOrderPage" resultType="com.zuche.module.order.vo.AdminOrderVO">
+        SELECT
+        <include refid="AdminColumns"/>
+        FROM lease_order o
+        LEFT JOIN store s       ON s.id = o.store_id AND s.deleted = 0
+        LEFT JOIN store rs      ON rs.id = o.return_store_id AND rs.deleted = 0
+        LEFT JOIN sys_user u    ON u.id = o.user_id AND u.deleted = 0
+        WHERE o.deleted = 0
+        <if test="q.status != null and q.status != ''">
+            AND o.status = #{q.status}
+        </if>
+        <if test="q.storeId != null">
+            AND o.store_id = #{q.storeId}
+        </if>
+        <if test="q.startFrom != null">
+            AND o.start_date &gt;= #{q.startFrom}
+        </if>
+        <if test="q.startTo != null">
+            AND o.start_date &lt;= #{q.startTo}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (
+                o.order_no LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.real_name LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.phone LIKE CONCAT('%', #{q.keyword}, '%')
+            )
+        </if>
+        ORDER BY o.create_time DESC, o.id DESC
+    </select>
+
+    <select id="selectAdminOrderDetail" resultType="com.zuche.module.order.vo.AdminOrderDetailVO">
+        SELECT
+        <include refid="AdminColumns"/>,
+        o.remark,
+        o.cancel_reason,
+        o.cancel_time,
+        o.pickup_time,
+        o.return_apply_time,
+        o.return_time,
+        o.finish_time,
+        o.late_fee,
+        o.deposit_refund_status,
+        o.credit_score_snapshot,
+        u.credit_score      AS customer_credit_score,
+        u.credit_level      AS customer_credit_level
+        FROM lease_order o
+        LEFT JOIN store s       ON s.id = o.store_id AND s.deleted = 0
+        LEFT JOIN store rs      ON rs.id = o.return_store_id AND rs.deleted = 0
+        LEFT JOIN sys_user u    ON u.id = o.user_id AND u.deleted = 0
+        WHERE o.id = #{orderId}
+          AND o.deleted = 0
+    </select>
+
+    <!--
+      顶部数字卡：一条 SQL 出全部计数，避免六次往返。
+      SUM(status = 'X') 在 MySQL 里等价于 SUM(CASE WHEN ...)，比写六个子查询短。
+    -->
+    <select id="selectStats" resultType="com.zuche.module.order.vo.AdminOrderStatsVO">
+        SELECT
+            COUNT(*)                                                        AS total,
+            COALESCE(SUM(o.status = 'WAIT_PAY'), 0)                         AS pending_pay,
+            COALESCE(SUM(o.status = 'WAIT_PICKUP'), 0)                      AS pending_pickup,
+            COALESCE(SUM(o.status IN ('IN_USE', 'WAIT_RETURN', 'OVERDUE')), 0) AS in_use,
+            COALESCE(SUM(o.status = 'OVERDUE'), 0)                          AS overdue,
+            COALESCE(SUM(o.create_time &gt;= CURDATE()), 0)                   AS today_new,
+            COALESCE(SUM(o.late_fee), 0)                                    AS late_fee_total
+        FROM lease_order o
+        WHERE o.deleted = 0
+    </select>
+
+</mapper>

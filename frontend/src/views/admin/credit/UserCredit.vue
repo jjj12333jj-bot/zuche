@@ -208,11 +208,15 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adjustCredit, getAdminUsers, getRiskOverview, getUserLogs } from '@/api/adminCredit'
 import { formatDateTime } from '@/utils/format'
 
 const QUICK = [-20, -10, -5, 5, 10, 20]
+
+// 从「用户管理」页点「信用明细」跳过来时带上用户名，直接定位到这个人
+const route = useRoute()
 
 const loading = ref(false)
 const rows = ref([])
@@ -362,6 +366,10 @@ async function loadLogs() {
 }
 
 onMounted(() => {
+  const kw = route.query.keyword
+  if (kw) {
+    query.keyword = String(kw)
+  }
   load()
   loadOverview()
 })

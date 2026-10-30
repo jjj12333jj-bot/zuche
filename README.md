@@ -250,6 +250,10 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/orders/<orderId
 | `/admin/vehicle/list` | 车辆档案：24 台，当前订单/保单到期/下次保养一屏可见 |
 | `/admin/vehicle/maintenance` | 保养维修台账：13 条，登记自动推里程、维修自动置维保 |
 | `/admin/vehicle/insurance` | 保险：48 张，已过期 2 / 30 天内到期 6 用红橙区分 |
+| `/admin/orders` | 订单：全平台 300 笔，关闭仅限未取车，已支付自动退款 |
+| `/admin/users` | 用户：9 个账号，冻结当场失效，调分必填原因并落信用日志 |
+| `/admin/stores` | 网点：4 个，能停用不轻易删（有车或有单即拦） |
+| `/admin/evaluations` | 评价：12 条 4.25 分，只隐藏不删除，支持图片预览与覆盖式回复 |
 | `/store/overview` | 网点管理员只看到网点管理菜单 |
 | `/checkout/1` | 下单页：选租期/归还网点/备注，右侧实时试算与信用减免 |
 | `/cashier/<orderId>` | 收银台：金额、支付方式、信用快照，支付后展示两条流水 |

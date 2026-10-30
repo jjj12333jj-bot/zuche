@@ -166,6 +166,12 @@ UPDATE sys_user SET credit_score =  92, credit_level = 'NORMAL'    WHERE id = 6;
 UPDATE sys_user SET credit_score =  74, credit_level = 'WATCH'     WHERE id = 7;
 UPDATE sys_user SET credit_score = 138, credit_level = 'EXCELLENT' WHERE id = 9;
 
+-- 最近登录时间：后台「用户管理」要靠它判断账号是否还活跃。
+-- 全部为空时那一列全是「从未登录」，看不出谁是沉睡用户，演示效果也假。
+UPDATE sys_user
+   SET last_login_time = DATE_SUB(NOW(), INTERVAL (id * 9 + (id % 3) * 17) HOUR)
+ WHERE deleted = 0 AND last_login_time IS NULL;
+
 -- ---------------------------------------------------------------------
 -- 5. 地址 / 收藏 / 公告 / 轮播 / 调车申请
 -- ---------------------------------------------------------------------
@@ -589,10 +595,25 @@ GROUP BY o.id
 ORDER BY o.id DESC
 LIMIT 12;
 
+-- 评价配图：用车图而不是占位图，后台「评价管理」可以点开大图验证
+-- 前 5 条单图、第 6~10 条双图（验证多图预览），最后 2 条留空（验证空态）
+UPDATE order_evaluation e
+  JOIN vehicle v       ON v.id = e.vehicle_id
+  JOIN vehicle_model m ON m.id = v.model_id
+   SET e.images = JSON_ARRAY(m.cover_image)
+ WHERE e.id IN (SELECT id FROM (
+        SELECT id FROM order_evaluation WHERE deleted = 0 ORDER BY id LIMIT 5) t);
+
+UPDATE order_evaluation e
+  JOIN vehicle v       ON v.id = e.vehicle_id
+  JOIN vehicle_model m ON m.id = v.model_id
+   SET e.images = JSON_ARRAY(m.cover_image, '/images/cars/car-8.svg')
+ WHERE e.id IN (SELECT id FROM (
+        SELECT id FROM order_evaluation WHERE deleted = 0 ORDER BY id LIMIT 5 OFFSET 5) t);
+
 -- ---------------------------------------------------------------------
 -- 8. 信用申诉 / 风控名单
--- ---------------------------------------------------------------------
-INSERT INTO credit_appeal (appeal_no, user_id, credit_log_id, order_id, appeal_reason, status, handle_user_id, handle_time, handle_remark, restore_score, create_time) VALUES
+-- ---------------------------------------------------------------------INSERT INTO credit_appeal (appeal_no, user_id, credit_log_id, order_id, appeal_reason, status, handle_user_id, handle_time, handle_remark, restore_score, create_time) VALUES
 ('A202610200001', 7, NULL, NULL, '逾期是因为车辆故障无法启动，已联系网点救援，不应计入逾期。', 'PENDING',  NULL, NULL, NULL, 0, DATE_SUB(NOW(), INTERVAL 3 DAY)),
 ('A202610180001', 6, NULL, NULL, '取车迟到 20 分钟，原因是地铁延误，希望酌情减免扣分。', 'REJECTED', 1, DATE_SUB(NOW(), INTERVAL 5 DAY), '取车时间已在订单中明确，维持原判', 0, DATE_SUB(NOW(), INTERVAL 7 DAY)),
 ('A202610120001', 4, NULL, NULL, '订单取消是网点无车导致，非本人原因。', 'APPROVED', 1, DATE_SUB(NOW(), INTERVAL 14 DAY), '经核实网点库存异常，恢复扣分 3 分', 3, DATE_SUB(NOW(), INTERVAL 16 DAY));

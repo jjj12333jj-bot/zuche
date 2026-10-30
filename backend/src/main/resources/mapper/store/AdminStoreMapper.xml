@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.store.mapper.AdminStoreMapper">
+
+    <!--
+      平台网点列表：一个网点一行，其余指标全部标量子查询。
+      不用 JOIN + GROUP BY 的理由与 StoreAdminMapper.selectOverview 相同：
+      车辆要到「状态」维度切片、订单要到「时间」维度切片，
+      一次 JOIN 会把不同维度的行乘在一起，数字直接翻倍。
+    -->
+    <sql id="StoreColumns">
+        s.id,
+        s.store_code,
+        s.store_name,
+        s.address,
+        s.phone,
+        s.business_hours,
+        s.longitude,
+        s.latitude,
+        s.manager_id,
+        (SELECT m.real_name FROM sys_user m WHERE m.id = s.manager_id AND m.deleted = 0) AS manager_name,
+        s.status,
+        s.create_time,
+
+        /* ---------- 车辆资产 ---------- */
+        (SELECT COUNT(*) FROM vehicle v
+          WHERE v.store_id = s.id AND v.deleted = 0)                     AS vehicle_total,
+        (SELECT COUNT(*) FROM vehicle v
+          WHERE v.store_id = s.id AND v.deleted = 0 AND v.status = 1)     AS vehicle_available,
+        (SELECT COUNT(*) FROM vehicle v
+          WHERE v.store_id = s.id AND v.deleted = 0 AND v.status = 2)     AS vehicle_rented,
+        (SELECT COUNT(*) FROM vehicle v
+          WHERE v.store_id = s.id AND v.deleted = 0 AND v.status = 3)     AS vehicle_maintenance,
+
+        /* ---------- 经营 ---------- */
+        (SELECT COUNT(*) FROM lease_order o
+          WHERE o.store_id = s.id AND o.deleted = 0 AND o.status &lt;&gt; 'CANCELLED') AS order_total,
+        (SELECT COUNT(*) FROM lease_order o
+          WHERE o.store_id = s.id AND o.deleted = 0
+            AND o.status IN ('WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE'))     AS active_order_count,
+        (SELECT COALESCE(SUM(o.total_amount), 0) FROM lease_order o
+          WHERE o.store_id = s.id AND o.deleted = 0
+            AND o.status NOT IN ('CANCELLED', 'WAIT_PAY')
+            AND o.create_time &gt;= DATE_FORMAT(CURDATE(), '%Y-%m-01'))              AS month_revenue
+    </sql>
+
+    <select id="selectStorePage" resultType="com.zuche.module.store.vo.AdminStoreVO">
+        SELECT
+        <include refid="StoreColumns"/>
+        FROM store s
+        WHERE s.deleted = 0
+        <if test="q.status != null">
+            AND s.status = #{q.status}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (
+                s.store_name LIKE CONCAT('%', #{q.keyword}, '%')
+                OR s.store_code LIKE CONCAT('%', #{q.keyword}, '%')
+                OR s.address LIKE CONCAT('%', #{q.keyword}, '%')
+                OR s.phone LIKE CONCAT('%', #{q.keyword}, '%')
+            )
+        </if>
+        ORDER BY s.status DESC, s.id
+    </select>
+
+    <select id="selectStoreById" resultType="com.zuche.module.store.vo.AdminStoreVO">
+        SELECT
+        <include refid="StoreColumns"/>
+        FROM store s
+        WHERE s.deleted = 0 AND s.id = #{id}
+    </select>
+
+    <select id="selectStats" resultType="com.zuche.module.store.vo.AdminStoreStatsVO">
+        SELECT
+            COUNT(*)                                        AS total,
+            COALESCE(SUM(s.status = 1), 0)                  AS normal,
+            COALESCE(SUM(s.status = 0), 0)                  AS disabled,
+            (SELECT COUNT(*) FROM vehicle v
+              WHERE v.deleted = 0 AND v.store_id IN (SELECT id FROM store WHERE deleted = 0))
+                                                            AS vehicle_total,
+            (SELECT COALESCE(SUM(o.total_amount), 0) FROM lease_order o
+              WHERE o.deleted = 0
+                AND o.status NOT IN ('CANCELLED', 'WAIT_PAY')
+                AND o.create_time &gt;= DATE_FORMAT(CURDATE(), '%Y-%m-01'))
+                                                            AS month_revenue
+        FROM store s
+        WHERE s.deleted = 0
+    </select>
+
+    <select id="countByCode" resultType="int">
+        SELECT COUNT(*) FROM store
+         WHERE store_code = #{storeCode}
+        <if test="excludeId != null">
+            AND id &lt;&gt; #{excludeId}
+        </if>
+    </select>
+
+    <select id="countVehicles" resultType="int">
+        SELECT COUNT(*) FROM vehicle WHERE store_id = #{storeId} AND deleted = 0
+    </select>
+
+    <select id="countOrders" resultType="int">
+        SELECT COUNT(*) FROM lease_order
+         WHERE store_id = #{storeId} AND deleted = 0
+    </select>
+
+    <select id="countActiveOrders" resultType="int">
+        SELECT COUNT(*) FROM lease_order
+         WHERE store_id = #{storeId} AND deleted = 0
+           AND status IN ('WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+    </select>
+
+</mapper>

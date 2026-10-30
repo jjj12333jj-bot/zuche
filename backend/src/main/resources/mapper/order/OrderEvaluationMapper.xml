@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.order.mapper.OrderEvaluationMapper">
+
+    <!--
+      images 是 TEXT 里的 JSON 数组，必须显式挂 TypeHandler。
+      autoMapping=true 让其余列继续走自动驼峰映射，只为这一列破例。
+    -->
+    <resultMap id="EvalMap" type="com.zuche.module.order.vo.EvaluationVO" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="images" column="images"
+                typeHandler="com.zuche.common.handler.JsonStringListTypeHandler"/>
+    </resultMap>
+
+    <!--
+      评价要能独立看懂：谁、在哪个网点、租了哪台车、打几分、说了什么。
+      因此四张表一次 JOIN 完，不留给前端再补齐（前端拿不到用户手机号）。
+      全部 LEFT JOIN：车辆被删或用户注销时，评价本身仍要能显示。
+    -->
+    <sql id="EvalColumns">
+        e.id,
+        e.order_id,
+        o.order_no,
+        o.store_id,
+        s.store_name,
+        e.user_id,
+        u.username,
+        u.real_name                                        AS customer_name,
+        u.phone                                            AS customer_phone,
+        e.vehicle_id,
+        CONCAT(COALESCE(b.brand_name, ''), ' ', COALESCE(m.model_name, '')) AS vehicle_name,
+        v.license_plate,
+        e.rating,
+        e.content,
+        e.images,
+        e.reply,
+        e.reply_time,
+        e.status,
+        e.create_time
+    </sql>
+
+    <sql id="EvalJoins">
+        FROM order_evaluation e
+        LEFT JOIN lease_order o     ON o.id = e.order_id
+        LEFT JOIN store s           ON s.id = o.store_id AND s.deleted = 0
+        LEFT JOIN sys_user u        ON u.id = e.user_id AND u.deleted = 0
+        LEFT JOIN vehicle v         ON v.id = e.vehicle_id AND v.deleted = 0
+        LEFT JOIN vehicle_model m   ON m.id = v.model_id
+        LEFT JOIN vehicle_brand b   ON b.id = m.brand_id
+    </sql>
+
+    <select id="selectEvalPage" resultMap="EvalMap">
+        SELECT
+        <include refid="EvalColumns"/>
+        <include refid="EvalJoins"/>
+        WHERE e.deleted = 0
+        <if test="q.rating != null">
+            AND e.rating = #{q.rating}
+        </if>
+        <if test="q.status != null">
+            AND e.status = #{q.status}
+        </if>
+        <if test="q.unreplied != null and q.unreplied">
+            AND (e.reply IS NULL OR e.reply = '')
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (
+                o.order_no LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{q.keyword}, '%')
+                OR u.real_name LIKE CONCAT('%', #{q.keyword}, '%')
+                OR e.content LIKE CONCAT('%', #{q.keyword}, '%')
+            )
+        </if>
+        ORDER BY e.create_time DESC, e.id DESC
+    </select>
+
+    <select id="selectEvalById" resultMap="EvalMap">
+        SELECT
+        <include refid="EvalColumns"/>
+        <include refid="EvalJoins"/>
+        WHERE e.id = #{id} AND e.deleted = 0
+    </select>
+
+    <select id="selectStats" resultType="com.zuche.module.order.vo.EvaluationStatsVO">
+        SELECT
+            COUNT(*)                                                    AS total,
+            ROUND(COALESCE(AVG(e.rating), 0), 2)                        AS avg_rating,
+            COALESCE(SUM(e.rating = 5), 0)                              AS five_star,
+            COALESCE(SUM(e.rating = 4), 0)                              AS four_star,
+            COALESCE(SUM(e.rating &lt;= 3), 0)                            AS low_star,
+            COALESCE(SUM(e.reply IS NOT NULL AND e.reply &lt;&gt; ''), 0)  AS replied,
+            COALESCE(SUM(e.reply IS NULL OR e.reply = ''), 0)           AS unreplied
+        FROM order_evaluation e
+        WHERE e.deleted = 0
+    </select>
+
+</mapper>

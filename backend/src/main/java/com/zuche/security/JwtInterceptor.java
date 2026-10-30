@@ -30,6 +30,7 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
+    private final AccountStatusGuard accountStatusGuard;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -44,7 +45,13 @@ public class JwtInterceptor implements HandlerInterceptor {
         }
         String token = header.startsWith(BEARER) ? header.substring(BEARER.length()).trim() : header.trim();
         try {
-            UserContext.set(jwtUtil.parse(token));
+            LoginUser user = jwtUtil.parse(token);
+            // token 本身有效不代表账号还能用：后台冻结后旧 token 必须当场失效
+            if (accountStatusGuard.isDisabled(user.getUserId())) {
+                writeUnauthorized(response, "账号已被冻结，请联系平台客服");
+                return false;
+            }
+            UserContext.set(user);
             return true;
         } catch (Exception e) {
             log.debug("token 解析失败: {}", e.getMessage());

@@ -315,6 +315,45 @@ public class OrderService {
                 "订单当前为「" + current.getLabel() + "」，不支持取消；已取车的订单请走归还流程");
     }
 
+    /**
+     * 平台关闭订单（不限归属）
+     *
+     * <p>与 {@link #cancel(Long, String)} 的差异只有两点：不校验 user_id、不自动扣信用分。
+     * 资金与车辆的处理完全复用同一段代码，避免平台关单后「钱退了一半」或「车没释放」。</p>
+     *
+     * <p>只允许关闭未取车的单：已取车的订单必须走归还流程，否则押金、违约金、
+     * 里程、车况全都没有结算依据，关完就成了一笔查不清的账。</p>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public OrderCancelVO adminClose(Long orderId, String reason) {
+        LeaseOrder order = orderMapper.selectByIdForUpdate(orderId);
+        if (order == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "订单不存在");
+        }
+        OrderStatus current = OrderStatus.of(order.getStatus());
+        String closeReason = StringUtils.hasText(reason) ? "平台关闭：" + reason : "平台关闭";
+
+        if (current == OrderStatus.WAIT_PAY) {
+            stateMachine.assertTransfer(current, OrderStatus.CANCELLED);
+            releaseVehicles(orderId);
+            updateCancel(orderId, closeReason, "NONE");
+            log.info("平台关闭未支付订单: orderNo={}, reason={}", order.getOrderNo(), reason);
+            return buildCancelVO(order, ZERO, null, null);
+        }
+        if (current == OrderStatus.WAIT_PICKUP) {
+            stateMachine.assertTransfer(current, OrderStatus.CANCELLED);
+            BigDecimal refunded = refundPaidOrder(order, closeReason);
+            releaseVehicles(orderId);
+            updateCancel(orderId, closeReason, "REFUNDED");
+            log.info("平台关闭已支付订单: orderNo={}, 退款={}, reason={}",
+                    order.getOrderNo(), refunded, reason);
+            return buildCancelVO(order, refunded, null, null);
+        }
+        throw new BusinessException(ResultCode.BUSINESS_ERROR,
+                "订单当前为「" + current.getLabel() + "」，只能关闭待支付或待取车的订单；"
+                        + "已取车的订单请由网点走归还流程");
+    }
+
     /* ==================== 4.1 取车 / 归还 ==================== */
 
     /**

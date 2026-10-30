@@ -168,6 +168,30 @@ const routes = [
         meta: { title: '保险记录' }
       },
       {
+        path: 'orders',
+        name: 'AdminOrders',
+        component: () => import('@/views/admin/order/OrderManage.vue'),
+        meta: { title: '订单管理' }
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: () => import('@/views/admin/user/UserManage.vue'),
+        meta: { title: '用户管理' }
+      },
+      {
+        path: 'stores',
+        name: 'AdminStores',
+        component: () => import('@/views/admin/store/StoreManage.vue'),
+        meta: { title: '网点管理' }
+      },
+      {
+        path: 'evaluations',
+        name: 'AdminEvaluations',
+        component: () => import('@/views/admin/evaluation/EvaluationManage.vue'),
+        meta: { title: '评价管理' }
+      },
+      {
         path: ':pathMatch(.*)*',
         name: 'AdminPlaceholder',
         component: () => import('@/views/admin/Placeholder.vue'),
