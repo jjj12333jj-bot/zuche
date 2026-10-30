@@ -7,6 +7,7 @@ import com.zuche.module.store.dto.DispatchQueryDTO;
 import com.zuche.module.store.service.DispatchService;
 import com.zuche.module.store.vo.DispatchVO;
 import com.zuche.module.vehicle.vo.StoreOptionVO;
+import com.zuche.module.system.annotation.OpLog;
 import com.zuche.security.RequireRole;
 import com.zuche.security.RoleCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,12 +54,14 @@ public class StoreDispatchController {
     @Operation(summary = "发起调车申请",
             description = "只能申请调出本网点的可租车辆；同车同时只允许一条待审批申请")
     @PostMapping("/dispatches")
+    @OpLog(module = "网点调车", operation = "发起调车申请")
     public Result<Void> create(@Valid @RequestBody DispatchCreateDTO dto) {
         return Result.success(dispatchService.create(dto), null);
     }
 
     @Operation(summary = "撤回调车申请", description = "仅待审批状态可撤回；已通过的不能撤")
     @PostMapping("/dispatches/{id}/cancel")
+    @OpLog(module = "网点调车", operation = "撤回调车申请")
     public Result<Void> cancel(@Parameter(description = "申请 ID") @PathVariable Long id) {
         return Result.success(dispatchService.cancel(id), null);
     }

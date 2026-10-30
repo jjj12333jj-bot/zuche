@@ -79,9 +79,6 @@ const stageTip = computed(() => {
   if (p.includes('/orders')) return '计划 S3：订单状态机、网点交付与归还、押金退还处理。'
   if (p.includes('/vehicle') || p.includes('/store/vehicles')) return '计划 S3：车辆资产 CRUD、图片、保养、保险、违章台账。'
   if (p.includes('/store/overview')) return '计划 S3：本网点车辆、订单、待处理与在租统计。'
-  if (p.includes('/users') || p.includes('/evaluations') || p.includes('/announcements') || p.includes('/banners') || p.includes('/logs')) {
-    return '计划 S5：基础数据与系统审计模块。'
-  }
   return `该模块属于 ${homePathLabel.value} 后续迭代范围，当前仅完成动态菜单与路由占位。`
 })
 </script>

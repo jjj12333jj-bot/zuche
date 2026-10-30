@@ -4,6 +4,7 @@ import com.zuche.common.PageResult;
 import com.zuche.common.Result;
 import com.zuche.common.StatusDTO;
 import com.zuche.module.credit.vo.CreditChangeVO;
+import com.zuche.module.system.annotation.OpLog;
 import com.zuche.module.user.dto.AdminUserQueryDTO;
 import com.zuche.module.user.dto.UserCreditAdjustDTO;
 import com.zuche.module.user.service.AdminUserService;
@@ -60,6 +61,7 @@ public class AdminUserController {
 
     @Operation(summary = "冻结/解冻", description = "status=1 正常，0 冻结；冻结后旧 token 立即失效")
     @PutMapping("/{id}/status")
+    @OpLog(module = "用户管理", operation = "冻结/解冻用户")
     public Result<AdminUserVO> status(@Parameter(description = "用户 ID") @PathVariable Long id,
                                       @Valid @RequestBody StatusDTO dto) {
         AdminUserVO vo = adminUserService.toggleStatus(id, dto.getStatus());
@@ -68,6 +70,7 @@ public class AdminUserController {
 
     @Operation(summary = "人工调分", description = "走信用日志，必有原因；单次 -50 ~ +50")
     @PostMapping("/{id}/credit")
+    @OpLog(module = "用户管理", operation = "人工调整信用分")
     public Result<CreditChangeVO> adjustCredit(@Parameter(description = "用户 ID") @PathVariable Long id,
                                                @Valid @RequestBody UserCreditAdjustDTO dto) {
         CreditChangeVO vo = adminUserService.adjustCredit(id, dto.getScoreChange(), dto.getReason());

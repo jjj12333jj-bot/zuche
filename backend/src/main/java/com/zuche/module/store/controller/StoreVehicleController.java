@@ -10,6 +10,7 @@ import com.zuche.module.store.dto.VehicleStatusDTO;
 import com.zuche.module.store.service.StoreVehicleService;
 import com.zuche.module.store.vo.MaintenanceVO;
 import com.zuche.module.store.vo.StoreVehicleVO;
+import com.zuche.module.system.annotation.OpLog;
 import com.zuche.security.RequireRole;
 import com.zuche.security.RoleCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,6 +55,7 @@ public class StoreVehicleController {
 
     @Operation(summary = "车辆调价", description = "同时改日租金与押金；已成交订单按快照价结算，不受影响")
     @PutMapping("/vehicles/{id}/price")
+    @OpLog(module = "网点车辆", operation = "车辆调价")
     public Result<Void> updatePrice(@Parameter(description = "车辆 ID") @PathVariable Long id,
                                     @Valid @RequestBody VehiclePriceDTO dto) {
         return Result.success(storeVehicleService.updatePrice(id, dto), null);
@@ -62,6 +64,7 @@ public class StoreVehicleController {
     @Operation(summary = "车辆上下架/进维保",
             description = "只接受 0 下架 / 1 可租 / 3 维保中；已租出由系统维护，有未结束订单时拒绝")
     @PutMapping("/vehicles/{id}/status")
+    @OpLog(module = "网点车辆", operation = "上下架车辆")
     public Result<Void> updateStatus(@Parameter(description = "车辆 ID") @PathVariable Long id,
                                      @Valid @RequestBody VehicleStatusDTO dto) {
         return Result.success(storeVehicleService.updateStatus(id, dto), null);
@@ -78,6 +81,7 @@ public class StoreVehicleController {
     @Operation(summary = "登记保养/维修台账",
             description = "里程大于档案值时自动更新车辆里程；登记维修且车辆空闲时自动置为维保中")
     @PostMapping("/vehicles/{id}/maintenances")
+    @OpLog(module = "网点车辆", operation = "新增保养记录")
     public Result<Void> addMaintenance(@Parameter(description = "车辆 ID") @PathVariable Long id,
                                        @Valid @RequestBody MaintenanceCreateDTO dto) {
         return Result.success(storeVehicleService.addMaintenance(id, dto), null);

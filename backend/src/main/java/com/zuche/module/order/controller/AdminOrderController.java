@@ -9,6 +9,7 @@ import com.zuche.module.order.vo.AdminOrderDetailVO;
 import com.zuche.module.order.vo.AdminOrderStatsVO;
 import com.zuche.module.order.vo.AdminOrderVO;
 import com.zuche.module.order.vo.OrderCancelVO;
+import com.zuche.module.system.annotation.OpLog;
 import com.zuche.security.RequireRole;
 import com.zuche.security.RoleCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,6 +60,7 @@ public class AdminOrderController {
 
     @Operation(summary = "关闭订单", description = "仅待支付/待取车；已支付的自动全额退款并释放车辆")
     @PostMapping("/{id}/close")
+    @OpLog(module = "订单管理", operation = "关闭订单")
     public Result<OrderCancelVO> close(@Parameter(description = "订单 ID") @PathVariable Long id,
                                        @Valid @RequestBody AdminCloseOrderDTO dto) {
         return Result.success("订单已关闭", adminOrderService.close(id, dto.getReason()));

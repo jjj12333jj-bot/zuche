@@ -8,6 +8,7 @@ import com.zuche.module.store.dto.StoreSaveDTO;
 import com.zuche.module.store.service.AdminStoreService;
 import com.zuche.module.store.vo.AdminStoreStatsVO;
 import com.zuche.module.store.vo.AdminStoreVO;
+import com.zuche.module.system.annotation.OpLog;
 import com.zuche.security.RequireRole;
 import com.zuche.security.RoleCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -60,12 +61,14 @@ public class AdminStoreController {
 
     @Operation(summary = "新增网点", description = "编码唯一，格式 2~10 位大写字母或数字")
     @PostMapping
+    @OpLog(module = "网点管理", operation = "新增网点")
     public Result<AdminStoreVO> create(@Valid @RequestBody StoreSaveDTO dto) {
         return Result.success("网点已创建", adminStoreService.create(dto));
     }
 
     @Operation(summary = "编辑网点")
     @PutMapping("/{id}")
+    @OpLog(module = "网点管理", operation = "编辑网点")
     public Result<AdminStoreVO> update(@Parameter(description = "网点 ID") @PathVariable Long id,
                                        @Valid @RequestBody StoreSaveDTO dto) {
         return Result.success("网点已更新", adminStoreService.update(id, dto));
@@ -73,6 +76,7 @@ public class AdminStoreController {
 
     @Operation(summary = "停用/恢复营业", description = "有进行中订单时不允许停用")
     @PutMapping("/{id}/status")
+    @OpLog(module = "网点管理", operation = "停用/恢复网点")
     public Result<AdminStoreVO> status(@Parameter(description = "网点 ID") @PathVariable Long id,
                                        @Valid @RequestBody StatusDTO dto) {
         AdminStoreVO vo = adminStoreService.toggleStatus(id, dto.getStatus());
@@ -81,6 +85,7 @@ public class AdminStoreController {
 
     @Operation(summary = "删除网点", description = "只有零车辆、零订单的空网点可以删")
     @DeleteMapping("/{id}")
+    @OpLog(module = "网点管理", operation = "删除网点")
     public Result<Void> delete(@Parameter(description = "网点 ID") @PathVariable Long id) {
         adminStoreService.delete(id);
         return Result.success("网点已删除", null);

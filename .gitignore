@@ -38,3 +38,6 @@ sql/_bak*.sql
 
 # ---- WorkBuddy 内部工作记忆（不纳入代码仓库） ----
 .workbuddy/
+
+# ---- 本地验证截图 ----
+shots/

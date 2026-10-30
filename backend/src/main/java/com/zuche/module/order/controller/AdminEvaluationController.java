@@ -8,6 +8,7 @@ import com.zuche.module.order.dto.EvaluationReplyDTO;
 import com.zuche.module.order.service.EvaluationService;
 import com.zuche.module.order.vo.EvaluationStatsVO;
 import com.zuche.module.order.vo.EvaluationVO;
+import com.zuche.module.system.annotation.OpLog;
 import com.zuche.security.RequireRole;
 import com.zuche.security.RoleCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,6 +56,7 @@ public class AdminEvaluationController {
 
     @Operation(summary = "回复评价", description = "覆盖式回复，重复提交会更新为最新内容")
     @PostMapping("/{id}/reply")
+    @OpLog(module = "评价管理", operation = "回复评价")
     public Result<EvaluationVO> reply(@Parameter(description = "评价 ID") @PathVariable Long id,
                                       @Valid @RequestBody EvaluationReplyDTO dto) {
         return Result.success("回复成功", evaluationService.reply(id, dto.getReply()));
@@ -62,6 +64,7 @@ public class AdminEvaluationController {
 
     @Operation(summary = "展示/隐藏", description = "status=1 展示，0 隐藏；不物理删除")
     @PutMapping("/{id}/status")
+    @OpLog(module = "评价管理", operation = "展示/隐藏评价")
     public Result<EvaluationVO> status(@Parameter(description = "评价 ID") @PathVariable Long id,
                                        @Valid @RequestBody StatusDTO dto) {
         return Result.success(evaluationService.toggleStatus(id, dto.getStatus()));

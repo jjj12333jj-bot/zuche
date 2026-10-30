@@ -7,6 +7,7 @@ import com.zuche.module.store.dto.StoreOrderQueryDTO;
 import com.zuche.module.store.service.StoreAdminService;
 import com.zuche.module.store.vo.StoreOrderVO;
 import com.zuche.module.store.vo.StoreOverviewVO;
+import com.zuche.module.system.annotation.OpLog;
 import com.zuche.security.RequireRole;
 import com.zuche.security.RoleCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,6 +56,7 @@ public class StoreAdminController {
 
     @Operation(summary = "办理交付", description = "待取车 → 已取车；只能操作本网点订单")
     @PostMapping("/orders/{id}/pickup")
+    @OpLog(module = "网点订单", operation = "确认交付车辆")
     public Result<Void> pickup(@Parameter(description = "订单 ID") @PathVariable Long id) {
         storeAdminService.pickup(id);
         return Result.success("已办理交付", null);
@@ -63,6 +65,7 @@ public class StoreAdminController {
     @Operation(summary = "办理归还并结算",
             description = "待归还/逾期 → 已完成；违约金、押金退款、信用结算与用户端共用同一套实现")
     @PostMapping("/orders/{id}/return-confirm")
+    @OpLog(module = "网点订单", operation = "确认归还并结算")
     public Result<OrderReturnVO> confirmReturn(@Parameter(description = "订单 ID") @PathVariable Long id) {
         OrderReturnVO vo = storeAdminService.confirmReturn(id);
         String message = vo.getLateFee() != null && vo.getLateFee().signum() > 0

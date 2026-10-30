@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.system.mapper.OperationLogMapper">
+
+    <sql id="Columns">
+        l.id, l.user_id, l.username, l.module, l.operation, l.method,
+        l.request_uri, l.params, l.ip, l.cost_ms, l.status, l.create_time
+    </sql>
+
+    <select id="selectLogPage" resultType="com.zuche.module.system.vo.OperationLogVO">
+        SELECT
+        <include refid="Columns"/>
+        FROM operation_log l
+        <where>
+            <if test="q.module != null and q.module != ''">
+                AND l.module = #{q.module}
+            </if>
+            <if test="q.status != null">
+                AND l.status = #{q.status}
+            </if>
+            <if test="q.keyword != null and q.keyword != ''">
+                AND (l.username LIKE CONCAT('%', #{q.keyword}, '%')
+                     OR l.operation LIKE CONCAT('%', #{q.keyword}, '%')
+                     OR l.request_uri LIKE CONCAT('%', #{q.keyword}, '%'))
+            </if>
+            <if test="q.startDate != null">
+                AND l.create_time &gt;= #{q.startDate}
+            </if>
+            <!-- 结束日期含当天：用「小于次日 0 点」而不是「小于等于当天」，避免把 23:59 之后漏掉 -->
+            <if test="q.endDate != null">
+                AND l.create_time &lt; DATE_ADD(#{q.endDate}, INTERVAL 1 DAY)
+            </if>
+        </where>
+        ORDER BY l.id DESC
+    </select>
+
+    <select id="selectStats" resultType="com.zuche.module.system.vo.OperationLogStatsVO">
+        SELECT COUNT(*)                                     AS total,
+               COALESCE(SUM(l.create_time &gt;= CURDATE()), 0) AS today_count,
+               COALESCE(SUM(l.status = 0), 0)               AS fail_count,
+               COALESCE(ROUND(AVG(l.cost_ms)), 0)           AS avg_cost
+        FROM operation_log l
+    </select>
+
+    <select id="selectModules" resultType="string">
+        SELECT DISTINCT module FROM operation_log
+         WHERE module IS NOT NULL AND module &lt;&gt; ''
+         ORDER BY module
+    </select>
+
+</mapper>

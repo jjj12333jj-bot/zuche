@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.system.mapper.BannerMapper">
+
+    <sql id="Columns">
+        b.id, b.title, b.image_url, b.link_url, b.position, b.sort_no, b.status, b.create_time
+    </sql>
+
+    <select id="selectBannerPage" resultType="com.zuche.module.system.vo.BannerVO">
+        SELECT
+        <include refid="Columns"/>
+        FROM banner b
+        WHERE b.deleted = 0
+        <if test="q.status != null">
+            AND b.status = #{q.status}
+        </if>
+        <if test="q.position != null and q.position != ''">
+            AND b.position = #{q.position}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND b.title LIKE CONCAT('%', #{q.keyword}, '%')
+        </if>
+        <!-- 显示中的排在前面，同状态内按运营设定的排序号升序 -->
+        ORDER BY b.status DESC, b.position, b.sort_no, b.id
+    </select>
+
+    <select id="selectStats" resultType="com.zuche.module.system.vo.BannerStatsVO">
+        SELECT COUNT(*)                       AS total,
+               COALESCE(SUM(b.status = 1), 0) AS showing,
+               COALESCE(SUM(b.status = 0), 0) AS hidden
+        FROM banner b
+        WHERE b.deleted = 0
+    </select>
+
+    <select id="selectVisible" resultType="com.zuche.module.system.vo.BannerVO">
+        SELECT
+        <include refid="Columns"/>
+        FROM banner b
+        WHERE b.deleted = 0 AND b.status = 1
+        <if test="position != null and position != ''">
+            AND b.position = #{position}
+        </if>
+        ORDER BY b.position, b.sort_no, b.id
+    </select>
+
+    <select id="maxSortNo" resultType="int">
+        SELECT COALESCE(MAX(b.sort_no), 0) FROM banner b
+         WHERE b.deleted = 0 AND b.position = #{position}
+    </select>
+
+</mapper>

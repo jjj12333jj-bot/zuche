@@ -192,6 +192,24 @@ const routes = [
         meta: { title: '评价管理' }
       },
       {
+        path: 'announcements',
+        name: 'AdminAnnouncements',
+        component: () => import('@/views/admin/system/AnnouncementManage.vue'),
+        meta: { title: '公告管理' }
+      },
+      {
+        path: 'banners',
+        name: 'AdminBanners',
+        component: () => import('@/views/admin/system/BannerManage.vue'),
+        meta: { title: '轮播图管理' }
+      },
+      {
+        path: 'logs',
+        name: 'AdminOperationLogs',
+        component: () => import('@/views/admin/system/OperationLog.vue'),
+        meta: { title: '操作日志' }
+      },
+      {
         path: ':pathMatch(.*)*',
         name: 'AdminPlaceholder',
         component: () => import('@/views/admin/Placeholder.vue'),

@@ -187,7 +187,11 @@ INSERT INTO announcement (title, content, type, publisher_id, status, view_count
 ('信用分上线：押金最低 8 折', '平台已上线信用风控体系。信用分达到 120 分（优秀档）即可享受押金 8 折，良好档 9 折，待观察档押金上浮 20%。信用分由按时归还率、取消率、逾期次数与完成订单数共同决定，每笔变动都可在"我的-信用中心"查看明细，对扣分有异议可在线申诉。', 'RULE', 1, 1, 328, DATE_SUB(NOW(), INTERVAL 12 DAY)),
 ('新网点开业：亦庄经开区店', '亦庄经开区店正式营业，取还车时间 08:00-19:00，支持跨网点还车。开业首月经济型车型日租金 8 折。', 'ACTIVITY', 1, 1, 156, DATE_SUB(NOW(), INTERVAL 6 DAY)),
 ('假期取车提醒', '假期期间取车请提前 30 分钟到店，携带身份证与驾驶证原件。逾期归还将按日租金 1.5 倍收取违约金，并影响信用分。', 'NOTICE', 1, 1, 512, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-('押金退还时效说明', '网点确认归还后系统自动发起押金退还，当前为模拟支付通道，1 个工作日内完成。可在订单详情-退款记录中查看流水状态。', 'NOTICE', 1, 1, 87, DATE_SUB(NOW(), INTERVAL 1 DAY));
+('押金退还时效说明', '网点确认归还后系统自动发起押金退还，当前为模拟支付通道，1 个工作日内完成。可在订单详情-退款记录中查看流水状态。', 'NOTICE', 1, 1, 87, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+('邀请好友得 50 元租车券', '活动期间邀请好友注册并完成首单，双方各得 50 元租车券，券可叠加使用，有效期 90 天。同一设备、同一手机号视为同一用户。', 'ACTIVITY', 1, 1, 64, DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+-- 下面两条是草稿：后台列表要能演示「草稿 / 已发布」两态，草稿不进前台公告栏，publish_time 为空
+('2026 年春节网点营业时间安排', '春节期间（除夕至初六）各网点营业时间调整为 09:00-17:00，首都机场店、大兴机场店 24 小时值守。跨网点还车请提前在订单中备注。', 'NOTICE', 1, 0, 0, NULL),
+('新能源车型里程限制调整说明', '自下月起，新能源车型单日里程上限由 300 公里调整为 350 公里，超出部分按 0.8 元/公里计费。本条公告待运营确认后发布。', 'RULE', 1, 0, 0, NULL);
 
 INSERT INTO banner (title, image_url, link_url, position, sort_no, status) VALUES
 ('信用越好 押金越低',      '/images/banners/banner-1.svg', '/credit',       'HOME', 1, 1),
@@ -635,7 +639,13 @@ INSERT INTO operation_log (user_id, username, module, operation, method, request
 (3, 'store2', '调车申请', '发起调车申请',    'POST', '/api/store/dispatch', '{"vehicleId":22,"toStoreId":1}', '127.0.0.1', 27, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
 (2, 'store1', '车辆资产', '新增保养记录',    'POST', '/api/admin/vehicle/maintenance', '{"vehicleId":1,"cost":680}', '127.0.0.1', 19, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
 (3, 'store2', '车辆资产', '上架车辆',        'PUT',  '/api/store/vehicles/10/status', '{"status":1}', '127.0.0.1', 15, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(1, 'admin',  '公告管理', '发布公告',        'POST', '/api/admin/announcements', '{"title":"押金退还时效说明"}', '127.0.0.1', 33, 1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+(1, 'admin',  '公告管理', '发布公告',        'POST', '/api/admin/announcements', '{"title":"押金退还时效说明"}', '127.0.0.1', 33, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+-- 今天发生的操作：让「今日操作」不为 0，并留两条失败记录，演示「失败操作」统计与红色行
+(1, 'admin',  '公告管理', '发布公告',        'PUT',  '/api/admin/announcements/5/status', '{"status":1}', '127.0.0.1', 26, 1, DATE_SUB(NOW(), INTERVAL 3 HOUR)),
+(1, 'admin',  '轮播图管理', '新增轮播图',    'POST', '/api/admin/banners', '{"title":"邀请好友得 50 元租车券","position":"HOME","sortNo":4}', '127.0.0.1', 31, 1, DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+(1, 'admin',  '用户管理', '冻结/解冻用户',  'PUT',  '/api/admin/users/9/status', '{"status":0}', '127.0.0.1', 18, 0, DATE_SUB(NOW(), INTERVAL 80 MINUTE)),
+(1, 'admin',  '网点管理', '删除网点',        'DELETE', '/api/admin/stores/1', '{}', '127.0.0.1', 24, 0, DATE_SUB(NOW(), INTERVAL 40 MINUTE)),
+(1, 'admin',  '评价管理', '回复评价',        'POST', '/api/admin/evaluations/12/reply', '{"reply":"感谢反馈，已安排网点复查车况"}', '127.0.0.1', 22, 1, DATE_SUB(NOW(), INTERVAL 12 MINUTE));
 
 -- ---------------------------------------------------------------------
 -- 10. 信用分最终校准（保证恒等式成立，且等级与阈值一致）
