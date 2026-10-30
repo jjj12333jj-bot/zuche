@@ -42,6 +42,15 @@ public class StoreOverviewVO {
     @Schema(description = "出租率 = 已租出 / 在册，瞬时快照")
     private Double rentRate;
 
+    @Schema(description = "可租车辆数（排除下架与维保）")
+    private Integer rentableVehicles;
+
+    @Schema(description = "近 30 天被占用车日")
+    private Integer occupiedVehicleDays;
+
+    @Schema(description = "近 30 天车日利用率（%）：占用车日 ÷ (可租车辆 × 30)")
+    private Double utilizationRate;
+
     /* ==================== 订单存量（当前状态） ==================== */
 
     @Schema(description = "待取车：已付款等待交付")

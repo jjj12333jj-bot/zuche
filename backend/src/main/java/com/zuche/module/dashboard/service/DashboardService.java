@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,14 +51,45 @@ public class DashboardService {
         vo.setDays(d);
         vo.setGeneratedAt(LocalDateTime.now());
 
-        vo.setKpi(buildKpi(dashboardMapper.selectKpi(startDate)));
+        // 车日利用率单独算：窗口不能早于平台首单，否则分母里全是"不可能有单"的空档
+        int utilDays = resolveUtilizationDays(d);
+        LocalDate utilStart = LocalDate.now().minusDays(utilDays - 1L);
+
+        KpiVO kpi = buildKpi(dashboardMapper.selectKpi(startDate));
+        applyUtilization(kpi, utilDays, utilStart);
+        vo.setKpi(kpi);
+
         vo.setTrend(fillMissingDays(dashboardMapper.selectTrend(startDate), startDate, d));
         vo.setFunnel(buildFunnel(dashboardMapper.selectFunnel(startDate)));
         vo.setVehicleStatus(withRatio(dashboardMapper.selectVehicleStatus()));
-        vo.setStores(buildStores(dashboardMapper.selectStoreStats(startDate)));
+        vo.setStores(buildStores(dashboardMapper.selectStoreStats(startDate, utilStart), utilDays));
         vo.setModels(dashboardMapper.selectModelStats(startDate, MODEL_TOP));
         vo.setCreditLevels(buildCreditLevels(dashboardMapper.selectCreditLevels(startDate)));
         return vo;
+    }
+
+    /**
+     * 车日利用率能统计多少天
+     *
+     * <p>平台上线前的日子没有车可租，计入分母只会把利用率稀释成一个失真的小数，
+     * 所以窗口右端对齐今天、左端不早于首单日期。</p>
+     */
+    private int resolveUtilizationDays(int days) {
+        LocalDate first = dashboardMapper.selectFirstOrderDate();
+        if (first == null) {
+            return days;
+        }
+        int coverage = (int) ChronoUnit.DAYS.between(first, LocalDate.now()) + 1;
+        return Math.min(days, Math.max(coverage, 1));
+    }
+
+    private void applyUtilization(KpiVO kpi, int utilDays, LocalDate utilStart) {
+        Integer rentable = dashboardMapper.selectRentableVehicles();
+        Integer occupied = dashboardMapper.selectOccupiedVehicleDays(utilStart);
+        kpi.setRentableVehicles(nz(rentable));
+        kpi.setOccupiedVehicleDays(nz(occupied));
+        kpi.setUtilizationDays(utilDays);
+        kpi.setUtilizationRate(rate(nz(occupied), nz(rentable) * utilDays));
     }
 
     private int normalizeDays(Integer days) {
@@ -163,7 +195,7 @@ public class DashboardService {
 
     /* ==================== 网点 ==================== */
 
-    private List<StoreStatVO> buildStores(List<StoreStatVO> list) {
+    private List<StoreStatVO> buildStores(List<StoreStatVO> list, int utilDays) {
         if (list == null) {
             return new ArrayList<>();
         }
@@ -176,6 +208,8 @@ public class DashboardService {
             } else {
                 s.setPerVehicle(BigDecimal.ZERO);
             }
+            int rentable = nz(s.getRentableVehicles());
+            s.setUtilizationRate(rate(nz(s.getOccupiedVehicleDays()), rentable * utilDays));
         }
         return list;
     }

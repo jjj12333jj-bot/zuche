@@ -13,6 +13,8 @@ import java.math.BigDecimal;
  *   <li><b>净营收</b> = 租金实收 − 租金退款 + 违约金。押金是代收代退，不计入营收。</li>
  *   <li><b>平均客单价</b> = 租金实收 / 已支付订单数，不含押金。</li>
  *   <li><b>出租率</b> = 当前已租车辆 / 在册车辆，是<b>瞬时快照</b>，不是时间加权利用率。</li>
+ *   <li><b>车日利用率</b> = 窗口内被占用车日 / 可租车日，是时间加权口径。
+ *       种子数据保证同一台车不出现档期重叠，所以 SUM 不会重复计数。</li>
  * </ul>
  */
 @Data
@@ -57,6 +59,18 @@ public class KpiVO {
 
     @Schema(description = "车辆出租率（%）")
     private Double rentRate;
+
+    @Schema(description = "可租车辆数（排除下架与维保）")
+    private Integer rentableVehicles;
+
+    @Schema(description = "窗口内被占用车日合计")
+    private Integer occupiedVehicleDays;
+
+    @Schema(description = "车日利用率（%）= 占用车日 / (可租车辆 × 统计天数)")
+    private Double utilizationRate;
+
+    @Schema(description = "车日利用率的实际统计天数（不超过数据覆盖天数）")
+    private Integer utilizationDays;
 
     @Schema(description = "用户总数（仅 USER 角色）")
     private Integer userTotal;

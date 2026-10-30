@@ -9,7 +9,7 @@
 --
 --  初始账号（密码均为 123456）:
 --    admin 系统管理员 | store1 网点管理员(中关村) | store2 网点管理员(望京)
---    user1 信用138优秀 | user2 112良好 | user3 92一般 | user4 74待观察 | user5 100新用户 | user6 128优秀
+--    user1 128优秀 | user2 112良好 | user3 92一般 | user4 74待观察 | user5 100新用户 | user6 138优秀
 -- =====================================================================
 
 USE zuche;
@@ -60,6 +60,8 @@ INSERT INTO vehicle_model (id, brand_id, model_name, category_code, seats, gearb
 
 -- ---------------------------------------------------------------------
 -- 3. 车辆（每个车型实例化 1 台，共 24 台；车牌/VIN 由 id 派生保证唯一）
+--    初始状态：24 号下架、9/18 号维保（不参与排程），其余 21 台可租；
+--    「已租出(2)」由 §6.1 按进行中订单回填，保证 occupied == status 2
 -- ---------------------------------------------------------------------
 INSERT INTO vehicle (vehicle_no, model_id, brand_id, store_id, license_plate, vin, color,
                      current_mileage, daily_price, deposit, discount_rate, register_date,
@@ -77,7 +79,7 @@ SELECT
     m.deposit,
     ELT(1 + (m.id % 5), 1.00, 0.98, 0.95, 1.00, 0.92),
     DATE_SUB(CURDATE(), INTERVAL (m.id * 11 % 700) DAY),
-    CASE WHEN m.id % 11 = 0 THEN 2 WHEN m.id % 9 = 0 THEN 3 ELSE 1 END,
+    CASE WHEN m.id = 24 THEN 0 WHEN m.id IN (9, 18) THEN 3 ELSE 1 END,
     10 + (m.id * 3) % 60,
     300 + m.id * 37,
     '车况良好，手续齐全，支持异地还车。'
@@ -145,13 +147,13 @@ INSERT INTO sys_user_role (user_id, role_id) VALUES (4,1),(5,1),(6,1),(7,1),(8,1
 INSERT INTO credit_log (user_id, action_code, change_type, score_before, score_change, score_after, reason, create_time) VALUES
 (4, 'ADMIN_ADJUST', 'ADMIN', 100,  28, 128, '初始化校准：历史长租记录优质，信用分折算上调', DATE_SUB(NOW(), INTERVAL 31 DAY)),
 (5, 'ADMIN_ADJUST', 'ADMIN', 100,  12, 112, '初始化校准：历史履约良好，信用分折算上调',     DATE_SUB(NOW(), INTERVAL 31 DAY)),
-(6, 'ADMIN_ADJUST', 'ADMIN', 100, -18,  82, '初始化校准：历史 2 次迟到取车记录',             DATE_SUB(NOW(), INTERVAL 31 DAY)),
+(6, 'ADMIN_ADJUST', 'ADMIN', 100,  -8,  92, '初始化校准：历史 2 次迟到取车记录',             DATE_SUB(NOW(), INTERVAL 31 DAY)),
 (7, 'ADMIN_ADJUST', 'ADMIN', 100, -26,  74, '初始化校准：历史 2 次逾期归还，转入待观察',     DATE_SUB(NOW(), INTERVAL 31 DAY)),
 (9, 'ADMIN_ADJUST', 'ADMIN', 100,  38, 138, '初始化校准：企业客户，长期高频优质租赁',       DATE_SUB(NOW(), INTERVAL 31 DAY));
 
 UPDATE sys_user SET credit_score = 128, credit_level = 'EXCELLENT' WHERE id = 4;
 UPDATE sys_user SET credit_score = 112, credit_level = 'GOOD'      WHERE id = 5;
-UPDATE sys_user SET credit_score =  82, credit_level = 'NORMAL'    WHERE id = 6;
+UPDATE sys_user SET credit_score =  92, credit_level = 'NORMAL'    WHERE id = 6;
 UPDATE sys_user SET credit_score =  74, credit_level = 'WATCH'     WHERE id = 7;
 UPDATE sys_user SET credit_score = 138, credit_level = 'EXCELLENT' WHERE id = 9;
 
@@ -182,183 +184,380 @@ INSERT INTO dispatch_apply (apply_no, vehicle_id, from_store_id, to_store_id, ap
 ('D202610150001', 21, 2, 4, 3, '亦庄店商务接待需求上升', 'APPROVED', 1, DATE_SUB(NOW(), INTERVAL 6 DAY), '同意调拨，注意里程登记', DATE_SUB(NOW(), INTERVAL 7 DAY));
 
 -- ---------------------------------------------------------------------
--- 6. 历史订单（300 条，覆盖最近 30 天，双峰时段；一单可含 1~2 台车）
+-- 6. 历史订单（300 条；按「车辆档期」排程生成）
+--    核心约束：同一台车在时间轴上不重叠 —— 只有这样「车日利用率」才有意义
+--    状态分布：完成 252 / 取消 24 / 在租 6 / 逾期 6 / 待取车 12
+--    档期覆盖：今天-45 天 ~ 今天+10 天；瞬时出租率约 57%，窗口利用率 57%~69%
+--
+--    生成思路（而不是随机塞数据）：
+--      1) 先按状态决定「用车窗口」[s_date, e_date)；
+--      2) 在车辆池里找一台在该窗口内没有档期的车（已占用天数最少者优先，保证负载均衡）；
+--      3) 窗口内无车则按状态方向平移窗口重试，最多 12 次；
+--      4) 占上档期后写入 tmp_busy，后续订单就不会再撞车；
+--      5) 取消订单释放档期（不进 tmp_busy），符合"取消即放车"的业务语义。
 -- ---------------------------------------------------------------------
 DROP PROCEDURE IF EXISTS seed_orders;
 DELIMITER $$
 CREATE PROCEDURE seed_orders(IN total INT)
 BEGIN
   DECLARE i INT DEFAULT 1;
-  DECLARE b INT;
-  DECLARE j INT;
-  DECLARE vc INT;
-  DECLARE v_id BIGINT; DECLARE vp DECIMAL(10,2); DECLARE vd DECIMAL(10,2); DECLARE vdisc DECIMAL(3,2);
+  DECLARE slot INT;
+  DECLARE st VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+  DECLARE days INT; DECLARE lead_days INT;
+  DECLARE dir INT; DECLARE shift INT;
+  DECLARE ss DATE; DECLARE ee DATE; DECLARE pe DATE; DECLARE hold_end DATE;
+  DECLARE s_date DATE; DECLARE e_date DATE;
+  DECLARE c_at DATETIME; DECLARE h INT; DECLARE mi INT;
   DECLARE u_id BIGINT; DECLARE u_score INT;
   DECLARE u_level VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-  DECLARE st VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
   DECLARE coeff DECIMAL(3,2);
-  DECLARE d_off INT; DECLARE days INT; DECLARE h INT; DECLARE mi INT;
-  DECLARE s_date DATE; DECLARE e_date DATE;
-  DECLARE rent_total DECIMAL(10,2); DECLARE dep_total DECIMAL(10,2);
+  DECLARE o_no VARCHAR(32); DECLARE ord_id BIGINT;
+  DECLARE vc INT DEFAULT 1; DECLARE j INT;
+  DECLARE v_id BIGINT; DECLARE v2_id BIGINT; DECLARE v_store BIGINT; DECLARE cur_v BIGINT;
+  DECLARE vp DECIMAL(10,2); DECLARE vd DECIMAL(10,2); DECLARE vdisc DECIMAL(3,2);
   DECLARE irit DECIMAL(10,2); DECLARE idep DECIMAL(10,2);
-  DECLARE c_at DATETIME; DECLARE o_no VARCHAR(32); DECLARE ord_id BIGINT;
+  DECLARE rent_total DECIMAL(10,2); DECLARE dep_total DECIMAL(10,2);
+  DECLARE vfirst_price DECIMAL(10,2);
   DECLARE od INT DEFAULT 0; DECLARE late DECIMAL(10,2) DEFAULT 0;
   DECLARE pay_dep_id BIGINT; DECLARE pay_rent_id BIGINT;
-  DECLARE vfirst_price DECIMAL(10,2) DEFAULT 0;
   DECLARE sc INT;
 
-  WHILE i <= total DO
-    SET b = i % 20;
-    SET u_id = 4 + (i % 6);
-    SELECT credit_score, credit_level INTO u_score, u_level FROM sys_user WHERE id = u_id;
-    SELECT deposit_coefficient INTO coeff FROM credit_rule
-      WHERE rule_type = 'LEVEL' AND min_score <= u_score AND max_score >= u_score LIMIT 1;
+  -- 车辆档期表：只存"实际占用"的区间，取消订单不写
+  DROP TEMPORARY TABLE IF EXISTS tmp_busy;
+  CREATE TEMPORARY TABLE tmp_busy (
+    vehicle_id BIGINT UNSIGNED NOT NULL,
+    s_date     DATE NOT NULL,
+    e_date     DATE NOT NULL,
+    KEY idx_v (vehicle_id, s_date, e_date)
+  ) ENGINE = MEMORY;
 
-    -- 状态分布：70% 完成 / 10% 取消 / 10% 在租 / 5% 逾期 / 5% 待取车
-    IF b <= 13 THEN SET st = 'COMPLETED';
-    ELSEIF b <= 15 THEN SET st = 'CANCELLED';
-    ELSEIF b <= 17 THEN SET st = 'IN_USE';
-    ELSEIF b = 18 THEN SET st = 'OVERDUE';
+  -- 负载表：记录每台车已被排了多少单。MySQL 不允许同一条语句里两次打开同一张
+  -- 临时表（ERROR 1137），所以"判闲"用 tmp_busy、"排序"用 tmp_load，各引一次
+  DROP TEMPORARY TABLE IF EXISTS tmp_load;
+  CREATE TEMPORARY TABLE tmp_load (
+    vehicle_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    cnt        INT NOT NULL DEFAULT 0
+  ) ENGINE = MEMORY;
+  INSERT INTO tmp_load (vehicle_id, cnt) SELECT id, 0 FROM vehicle;
+
+  -- 各网点可租车辆数：排"当前在租/逾期"的单时，每个网点至少留 1 台可租，
+  -- 否则会出现"某网点整店 0 台可租"，演示时看着像数据错了
+  DROP TEMPORARY TABLE IF EXISTS tmp_store_free;
+  CREATE TEMPORARY TABLE tmp_store_free (
+    store_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    free_cnt INT NOT NULL DEFAULT 0
+  ) ENGINE = MEMORY;
+  INSERT INTO tmp_store_free (store_id, free_cnt)
+  SELECT store_id, COUNT(*) FROM vehicle WHERE deleted = 0 AND status IN (1, 2) GROUP BY store_id;
+
+  WHILE i <= total DO
+    SET slot = i % 100;
+
+    -- 状态分布（每个余数在 1..300 里正好出现 3 次）
+    IF slot < 84 THEN SET st = 'COMPLETED';
+    ELSEIF slot < 92 THEN SET st = 'CANCELLED';
+    ELSEIF slot < 94 THEN SET st = 'IN_USE';
+    ELSEIF slot < 96 THEN SET st = 'OVERDUE';
     ELSE SET st = 'WAIT_PICKUP';
     END IF;
 
-    SET days = 1 + (i % 4);
-    IF st IN ('COMPLETED', 'CANCELLED') THEN
-      SET d_off = 1 + (i * 7) % 29;
-      IF days > d_off THEN SET days = d_off; END IF;
+    -- 用车窗口：按状态反推，保证状态与日期自洽
+    IF st = 'COMPLETED' OR st = 'CANCELLED' THEN
+      -- 已结束：还车日在 2~39 天前，租期 1~3 天
+      SET days  = 1 + (i % 3);
+      SET e_date = DATE_SUB(CURDATE(), INTERVAL (2 + (i * 7) % 43) DAY);
+      SET s_date = DATE_SUB(e_date, INTERVAL days DAY);
+    ELSEIF st = 'IN_USE' THEN
+      -- 在租：已取车 1~3 天，还车日在明天及以后
+      SET days   = 2 + (i % 3);
+      SET s_date = DATE_SUB(CURDATE(), INTERVAL (1 + (i % 3)) DAY);
+      SET e_date = DATE_ADD(s_date, INTERVAL days DAY);
     ELSEIF st = 'OVERDUE' THEN
-      SET d_off = 6; SET days = 2;
+      -- 逾期：计划还车日已过 3~5 天，车还没回来
+      SET days   = 2 + (i % 2);
+      SET s_date = DATE_SUB(CURDATE(), INTERVAL (7 + (i % 3)) DAY);
+      SET e_date = DATE_ADD(s_date, INTERVAL days DAY);
     ELSE
-      SET d_off = (i % 3); SET days = 2 + (i % 3);
+      -- 待取车：明天起 1~6 天内取车
+      SET days   = 1 + (i % 3);
+      SET s_date = DATE_ADD(CURDATE(), INTERVAL (1 + (i % 6)) DAY);
+      SET e_date = DATE_ADD(s_date, INTERVAL days DAY);
     END IF;
 
-    -- 双峰时段：9-12 点、18-21 点
-    IF i % 10 < 5 THEN SET h = 9 + (i % 4);
-    ELSEIF i % 10 < 8 THEN SET h = 18 + (i % 4);
+    -- 下单时间 = 取车日 - 提前量；双峰时段（9-12 点 / 18-21 点）
+    SET lead_days = 1 + (i % 3);   -- 提前 1~3 天预订，保证下单/支付都早于取车时刻
+    IF i % 10 < 6 THEN SET h = 9 + (i % 4);
+    ELSEIF i % 10 < 9 THEN SET h = 18 + (i % 4);
     ELSE SET h = (i * 5) % 24;
     END IF;
-    SET mi = (i * 13) % 60;
+    SET mi   = (i * 13) % 60;
+    SET c_at = TIMESTAMP(DATE_SUB(s_date, INTERVAL lead_days DAY), MAKETIME(h, mi, 0));
+    -- 未来订单可能算出"下单时间在未来"，回拉到现在之前
+    IF c_at >= NOW() THEN
+      SET c_at = DATE_SUB(NOW(), INTERVAL (40 + i % 120) MINUTE);
+    END IF;
 
-    SET s_date = DATE_SUB(CURDATE(), INTERVAL d_off DAY);
-    SET e_date = DATE_ADD(s_date, INTERVAL days DAY);
-    SET c_at   = TIMESTAMP(s_date, MAKETIME(h, mi, 0));
-    SET o_no   = CONCAT('L', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'));
-    SET vc     = IF(i % 3 = 0, 2, 1);
+    /* ---------------- 选车：窗口内无档期，且已占用天数最少 ---------------- */
+    SET dir   = IF(st = 'COMPLETED' OR st = 'CANCELLED', -1, 1);
+    SET shift = 0;
+    SET v_id  = NULL;
+    SET v2_id = NULL;
+    SET vc    = IF(i % 17 = 0 AND st <> 'CANCELLED', 2, 1);
 
-    INSERT INTO lease_order
-      (order_no, user_id, store_id, return_store_id, start_date, end_date, rent_days, vehicle_count,
-       rent_amount, deposit_amount, total_amount,
-       credit_score_snapshot, credit_level_snapshot, deposit_coefficient, status,
-       pay_time, pickup_time, return_apply_time, return_time, finish_time, cancel_time, cancel_reason,
-       overdue_days, late_fee, deposit_refund_status, create_time)
-    VALUES
-      (o_no, u_id, 1 + (i % 4), 1 + (i % 4), s_date, e_date, days, vc,
-       0, 0, 0,
-       u_score, u_level, coeff, st,
-       IF(st = 'CANCELLED' AND i % 4 <> 0, NULL, DATE_ADD(c_at, INTERVAL 5 MINUTE)),
-       IF(st IN ('IN_USE','OVERDUE','RETURNED','COMPLETED'), DATE_ADD(c_at, INTERVAL 2 HOUR), NULL),
-       IF(st IN ('RETURNED','COMPLETED'), TIMESTAMP(e_date, '11:00:00'), NULL),
-       IF(st IN ('RETURNED','COMPLETED'), TIMESTAMP(e_date, '12:30:00'), NULL),
-       IF(st = 'COMPLETED', TIMESTAMP(e_date, '13:00:00'), NULL),
-       IF(st = 'CANCELLED', DATE_ADD(c_at, INTERVAL 20 MINUTE), NULL),
-       IF(st = 'CANCELLED', '临时行程变更', NULL),
-       0, 0,
-       CASE st WHEN 'COMPLETED' THEN 'REFUNDED' WHEN 'RETURNED' THEN 'PENDING' ELSE 'NONE' END,
-       c_at);
+    WHILE v_id IS NULL AND shift <= 12 DO
+      SET ss = DATE_ADD(s_date, INTERVAL (IF(shift = 0, 0, dir * shift)) DAY);
+      SET ee = DATE_ADD(ss, INTERVAL days DAY);
+      -- 逾期单的车至今未还，探闲窗口要一直探到"今天"，否则会排给已逾期未还的车
+      SET pe = IF(st = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), ee);
 
-    SET ord_id = LAST_INSERT_ID();
-    SET rent_total = 0; SET dep_total = 0; SET j = 1; SET vfirst_price = 0;
-
-    WHILE j <= vc DO
-      SET v_id = ((i * 5 + j * 7 + 3) % 24) + 1;
-      SELECT daily_price, deposit, discount_rate INTO vp, vd, vdisc FROM vehicle WHERE id = v_id;
-      IF j = 1 THEN SET vfirst_price = vp; END IF;
-      SET irit = ROUND(vp * days * vdisc, 2);
-      SET idep = ROUND(vd * coeff, 2);
-
-      INSERT INTO order_item (order_id, vehicle_id, vehicle_name, license_plate, daily_price,
-                              quantity, rent_days, discount_rate, rent_amount, deposit_amount, create_time)
-      SELECT ord_id, v_id, CONCAT(br.brand_name, ' ', m.model_name), v.license_plate, vp,
-             1, days, vdisc, irit, idep, c_at
+      SELECT v.id, v.store_id INTO v_id, v_store
         FROM vehicle v
-        JOIN vehicle_model m ON m.id = v.model_id
-        JOIN vehicle_brand br ON br.id = v.brand_id
-       WHERE v.id = v_id;
+       WHERE v.deleted = 0
+         AND v.status IN (1, 2)
+         AND NOT EXISTS (SELECT 1 FROM tmp_busy b
+                          WHERE b.vehicle_id = v.id
+                            AND b.s_date < pe AND b.e_date > ss)
+         AND (st NOT IN ('IN_USE', 'OVERDUE')
+              OR (SELECT f.free_cnt FROM tmp_store_free f WHERE f.store_id = v.store_id) >= 2)
+       ORDER BY (SELECT l.cnt FROM tmp_load l WHERE l.vehicle_id = v.id) ASC, v.id ASC
+       LIMIT 1;
 
-      SET rent_total = rent_total + irit;
-      SET dep_total  = dep_total + idep;
-      SET j = j + 1;
+      IF v_id IS NULL THEN
+        SET shift = shift + 1;
+      END IF;
     END WHILE;
 
-    SET od = 0; SET late = 0;
-    IF st = 'OVERDUE' THEN
-      SET od = DATEDIFF(CURDATE(), e_date);
-      IF od < 1 THEN SET od = 1; END IF;
-      SET late = ROUND(vfirst_price * od * 1.5, 2);
-    END IF;
-
-    UPDATE lease_order
-       SET rent_amount = rent_total,
-           deposit_amount = dep_total,
-           total_amount = rent_total + dep_total,
-           overdue_days = od,
-           late_fee = late
-     WHERE id = ord_id;
-
-    -- 支付流水：未取消(或已支付后取消)的订单都有租金+押金两条
-    IF st <> 'CANCELLED' OR i % 4 = 0 THEN
-      INSERT INTO payment_record (pay_no, order_id, user_id, pay_type, amount, pay_method, status, pay_time, remark, create_time)
-      VALUES (CONCAT('PAY', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'R'),
-              ord_id, u_id, 'RENT', rent_total, 'MOCK_WECHAT', 'SUCCESS', DATE_ADD(c_at, INTERVAL 5 MINUTE), '模拟支付-租金', DATE_ADD(c_at, INTERVAL 5 MINUTE));
-      SET pay_rent_id = LAST_INSERT_ID();
-
-      INSERT INTO payment_record (pay_no, order_id, user_id, pay_type, amount, pay_method, status, pay_time, remark, create_time)
-      VALUES (CONCAT('PAY', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'D'),
-              ord_id, u_id, 'DEPOSIT', dep_total, 'MOCK_WECHAT', 'SUCCESS', DATE_ADD(c_at, INTERVAL 5 MINUTE), '模拟支付-押金', DATE_ADD(c_at, INTERVAL 5 MINUTE));
-      SET pay_dep_id = LAST_INSERT_ID();
-
-      -- 完成订单：退押金
-      IF st = 'COMPLETED' THEN
-        INSERT INTO refund_record (refund_no, order_id, payment_id, user_id, refund_type, amount, reason,
-                                   status, apply_time, refund_time, channel, remark, create_time)
-        VALUES (CONCAT('REF', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'D'),
-                ord_id, pay_dep_id, u_id, 'DEPOSIT', dep_total, '订单完成，押金原路退还',
-                'REFUNDED', TIMESTAMP(e_date, '12:30:00'), TIMESTAMP(e_date, '13:00:00'), 'MOCK_WECHAT', '模拟退还押金',
-                TIMESTAMP(e_date, '13:00:00'));
+    -- 12 次平移仍无车（理论上不会发生），跳过这一单
+    IF v_id IS NULL THEN
+      SET i = i + 1;
+    ELSE
+      -- 一单两车：同网点再找一台同窗口空闲的车，找不到就退回一车
+      IF vc = 2 THEN
+        SELECT v.id INTO v2_id
+          FROM vehicle v
+         WHERE v.deleted = 0 AND v.status IN (1, 2)
+           AND v.store_id = v_store AND v.id <> v_id
+           AND NOT EXISTS (SELECT 1 FROM tmp_busy b
+                            WHERE b.vehicle_id = v.id
+                              AND b.s_date < pe AND b.e_date > ss)
+         ORDER BY (SELECT l.cnt FROM tmp_load l WHERE l.vehicle_id = v.id) ASC, v.id ASC
+         LIMIT 1;
+        IF v2_id IS NULL THEN SET vc = 1; END IF;
       END IF;
 
-      -- 已支付后取消：全额退款
-      IF st = 'CANCELLED' AND i % 4 = 0 THEN
-        INSERT INTO refund_record (refund_no, order_id, payment_id, user_id, refund_type, amount, reason,
-                                   status, apply_time, refund_time, channel, remark, create_time)
-        VALUES (CONCAT('REF', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'C'),
-                ord_id, pay_rent_id, u_id, 'CANCEL', rent_total + dep_total, '用户取消订单，租金与押金全额退还',
-                'REFUNDED', DATE_ADD(c_at, INTERVAL 20 MINUTE), DATE_ADD(c_at, INTERVAL 30 MINUTE), 'MOCK_WECHAT', '模拟取消退款',
-                DATE_ADD(c_at, INTERVAL 30 MINUTE));
-      END IF;
-    END IF;
+      SET s_date = ss;
+      SET e_date = ee;
 
-    -- 信用事件抽样（每 20 单），避免历史数据把分数顶到上限
-    IF i % 20 = 0 THEN
-      SET sc = (SELECT credit_score FROM sys_user WHERE id = u_id);
-      IF st = 'COMPLETED' THEN
-        INSERT INTO credit_log (user_id, action_code, change_type, score_before, score_change, score_after, order_id, dedup_key, reason, create_time)
-        VALUES (u_id, 'ORDER_FINISH', 'EVENT', sc, 2, LEAST(150, sc + 2), ord_id, '', '订单完成', TIMESTAMP(e_date, '13:00:00'));
-        UPDATE sys_user SET credit_score = LEAST(150, sc + 2) WHERE id = u_id;
-      ELSEIF st = 'OVERDUE' THEN
-        INSERT INTO credit_log (user_id, action_code, change_type, score_before, score_change, score_after, order_id, dedup_key, reason, create_time)
-        VALUES (u_id, 'OVERDUE', 'EVENT', sc, -3, GREATEST(0, sc - 3), ord_id, '1', CONCAT('逾期未归还 ', od, ' 天'), TIMESTAMP(e_date, '23:59:00'));
-        UPDATE sys_user SET credit_score = GREATEST(0, sc - 3) WHERE id = u_id;
+      /* ---------------- 下单用户 ---------------- */
+      -- 每轮都必须清空：u_id 是跨循环复用的变量，不清空会沿用上一轮的用户
+      SET u_id = NULL;
+      -- 在租/逾期单：同一用户不允许同时有两笔进行中订单
+      IF st IN ('IN_USE', 'OVERDUE') THEN
+        SELECT u.id INTO u_id
+          FROM sys_user u
+         WHERE u.id BETWEEN 4 AND 9
+           AND NOT EXISTS (SELECT 1 FROM lease_order o
+                            WHERE o.user_id = u.id AND o.deleted = 0
+                              AND o.status IN ('IN_USE', 'OVERDUE', 'WAIT_RETURN'))
+         ORDER BY (SELECT COUNT(*) FROM lease_order o2
+                    WHERE o2.user_id = u.id AND o2.deleted = 0) ASC, u.id ASC
+         LIMIT 1;
       END IF;
-    END IF;
+      IF u_id IS NULL THEN
+        SET u_id = 4 + (i % 6);
+      END IF;
 
-    SET i = i + 1;
+      SELECT credit_score, credit_level INTO u_score, u_level FROM sys_user WHERE id = u_id;
+      SELECT deposit_coefficient INTO coeff FROM credit_rule
+        WHERE rule_type = 'LEVEL' AND min_score <= u_score AND max_score >= u_score LIMIT 1;
+      IF coeff IS NULL THEN SET coeff = 1.00; END IF;
+
+      SET o_no = CONCAT('L', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'));
+
+      -- 逾期天数：已完成的"逾期归还"单（抽样约 5%）与仍未归还的逾期单
+      -- 违约金只在"归还结算"时落账，仍在逾期中的单 late_fee 保持 0，
+      -- 详情页会用 overdue_days 现场计算应计金额（与 OrderService 口径一致）
+      IF st = 'OVERDUE' THEN
+        SET od = DATEDIFF(CURDATE(), e_date);
+        IF od < 1 THEN SET od = 1; END IF;
+      ELSEIF st = 'COMPLETED' THEN
+        -- 逾期归还概率按信用等级分档：等级越低越容易迟到，
+        -- 这样"信用等级 vs 逾期率"的图才有区分度，而不是随机噪声
+        IF    u_level = 'RISK'      AND i % 4  = 0 THEN SET od = 1 + (i % 4);
+        ELSEIF u_level = 'WATCH'    AND i % 7  = 0 THEN SET od = 1 + (i % 3);
+        ELSEIF u_level = 'NORMAL'   AND i % 11 = 0 THEN SET od = 1 + (i % 2);
+        ELSEIF u_level = 'GOOD'     AND i % 23 = 0 THEN SET od = 1 + (i % 2);
+        ELSEIF u_level = 'EXCELLENT' AND i % 41 = 0 THEN SET od = 1;
+        ELSE SET od = 0;
+        END IF;
+      ELSE
+        SET od = 0;
+      END IF;
+
+      INSERT INTO lease_order
+        (order_no, user_id, store_id, return_store_id, start_date, end_date, rent_days, vehicle_count,
+         rent_amount, deposit_amount, total_amount,
+         credit_score_snapshot, credit_level_snapshot, deposit_coefficient, status,
+         pay_time, pickup_time, return_apply_time, return_time, finish_time, cancel_time, cancel_reason,
+         overdue_days, late_fee, deposit_refund_status, create_time)
+      VALUES
+        (o_no, u_id, v_store, v_store, s_date, e_date, days, vc,
+         0, 0, 0,
+         u_score, u_level, coeff, st,
+         IF(st = 'CANCELLED' AND i % 4 <> 0, NULL, DATE_ADD(c_at, INTERVAL 10 MINUTE)),
+         IF(st IN ('IN_USE', 'OVERDUE', 'COMPLETED'), TIMESTAMP(s_date, MAKETIME(9, (i * 7) % 60, 0)), NULL),
+         IF(st = 'COMPLETED', TIMESTAMP(DATE_ADD(e_date, INTERVAL od DAY), '10:30:00'), NULL),
+         IF(st = 'COMPLETED', TIMESTAMP(DATE_ADD(e_date, INTERVAL od DAY), '11:00:00'), NULL),
+         IF(st = 'COMPLETED', TIMESTAMP(DATE_ADD(e_date, INTERVAL od DAY), '11:30:00'), NULL),
+         IF(st = 'CANCELLED', DATE_ADD(c_at, INTERVAL 25 MINUTE), NULL),
+         IF(st = 'CANCELLED', ELT(1 + (i % 3), '临时行程变更', '改约其他车型', '用户取消'), NULL),
+         od, 0,
+         CASE st WHEN 'COMPLETED' THEN 'REFUNDED'
+                 WHEN 'CANCELLED' THEN IF(i % 4 = 0, 'REFUNDED', 'NONE')
+                 ELSE 'NONE' END,
+         c_at);
+
+      SET ord_id     = LAST_INSERT_ID();
+      SET rent_total = 0; SET dep_total = 0; SET vfirst_price = 0;
+
+      SET j = 1;
+      WHILE j <= vc DO
+        SET cur_v = IF(j = 1, v_id, v2_id);
+        SELECT daily_price, deposit, discount_rate INTO vp, vd, vdisc FROM vehicle WHERE id = cur_v;
+        IF j = 1 THEN SET vfirst_price = vp; END IF;
+        SET irit = ROUND(vp * days * vdisc, 2);
+        SET idep = ROUND(vd * coeff, 2);
+
+        INSERT INTO order_item (order_id, vehicle_id, vehicle_name, license_plate, daily_price,
+                                quantity, rent_days, discount_rate, rent_amount, deposit_amount, create_time)
+        SELECT ord_id, cur_v, CONCAT(br.brand_name, ' ', m.model_name), v.license_plate, vp,
+               1, days, vdisc, irit, idep, c_at
+          FROM vehicle v
+          JOIN vehicle_model m ON m.id = v.model_id
+          JOIN vehicle_brand br ON br.id = v.brand_id
+         WHERE v.id = cur_v;
+
+        SET rent_total = rent_total + irit;
+        SET dep_total  = dep_total + idep;
+        SET j = j + 1;
+      END WHILE;
+
+      -- 违约金 = 日租金 × 逾期天数 × 1.5，最多不超过押金
+      SET late = 0;
+      IF st = 'COMPLETED' AND od > 0 THEN
+        SET late = LEAST(ROUND(vfirst_price * od * 1.5, 2), dep_total);
+      END IF;
+
+      UPDATE lease_order
+         SET rent_amount    = rent_total,
+             deposit_amount = dep_total,
+             total_amount   = rent_total + dep_total,
+             overdue_days   = od,
+             late_fee       = late
+       WHERE id = ord_id;
+
+      -- 占档期（取消订单不占，车辆立即释放）
+      -- 逾期单的车还没回来，档期要一直占到今天，否则后面会被重复排单
+      SET hold_end = IF(st = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), e_date);
+      IF st <> 'CANCELLED' THEN
+        INSERT INTO tmp_busy (vehicle_id, s_date, e_date) VALUES (v_id, s_date, hold_end);
+        UPDATE tmp_load SET cnt = cnt + 1 WHERE vehicle_id = v_id;
+        IF st IN ('IN_USE', 'OVERDUE') THEN
+          UPDATE tmp_store_free SET free_cnt = free_cnt - 1 WHERE store_id = v_store;
+        END IF;
+        IF vc = 2 THEN
+          INSERT INTO tmp_busy (vehicle_id, s_date, e_date) VALUES (v2_id, s_date, hold_end);
+          UPDATE tmp_load SET cnt = cnt + 1 WHERE vehicle_id = v2_id;
+        END IF;
+      END IF;
+
+      -- 支付流水：未取消(或已支付后取消)的订单都有租金+押金两条
+      IF st <> 'CANCELLED' OR i % 4 = 0 THEN
+        INSERT INTO payment_record (pay_no, order_id, user_id, pay_type, amount, pay_method, status, pay_time, remark, create_time)
+        VALUES (CONCAT('PAY', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'R'),
+                ord_id, u_id, 'RENT', rent_total, 'MOCK_WECHAT', 'SUCCESS', DATE_ADD(c_at, INTERVAL 10 MINUTE), '模拟支付-租金', DATE_ADD(c_at, INTERVAL 10 MINUTE));
+        SET pay_rent_id = LAST_INSERT_ID();
+
+        INSERT INTO payment_record (pay_no, order_id, user_id, pay_type, amount, pay_method, status, pay_time, remark, create_time)
+        VALUES (CONCAT('PAY', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'D'),
+                ord_id, u_id, 'DEPOSIT', dep_total, 'MOCK_WECHAT', 'SUCCESS', DATE_ADD(c_at, INTERVAL 10 MINUTE), '模拟支付-押金', DATE_ADD(c_at, INTERVAL 10 MINUTE));
+        SET pay_dep_id = LAST_INSERT_ID();
+
+        -- 完成订单：退押金
+        IF st = 'COMPLETED' THEN
+          INSERT INTO refund_record (refund_no, order_id, payment_id, user_id, refund_type, amount, reason,
+                                     status, apply_time, refund_time, channel, remark, create_time)
+          VALUES (CONCAT('REF', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'D'),
+                  ord_id, pay_dep_id, u_id, 'DEPOSIT', dep_total - late,
+                  IF(late > 0,
+                     CONCAT('订单完成，扣除逾期违约金 ', late, ' 元后退还押金'),
+                     '订单完成，押金原路退还'),
+                  'REFUNDED', TIMESTAMP(DATE_ADD(e_date, INTERVAL od DAY), '11:00:00'),
+                  TIMESTAMP(DATE_ADD(e_date, INTERVAL od DAY), '11:30:00'), 'MOCK_WECHAT', '模拟退还押金',
+                  TIMESTAMP(DATE_ADD(e_date, INTERVAL od DAY), '11:30:00'));
+        END IF;
+
+        -- 已支付后取消：全额退款
+        IF st = 'CANCELLED' AND i % 4 = 0 THEN
+          INSERT INTO refund_record (refund_no, order_id, payment_id, user_id, refund_type, amount, reason,
+                                     status, apply_time, refund_time, channel, remark, create_time)
+          VALUES (CONCAT('REF', DATE_FORMAT(c_at, '%Y%m%d%H%i%s'), LPAD(i, 4, '0'), 'C'),
+                  ord_id, pay_rent_id, u_id, 'CANCEL', rent_total + dep_total, '用户取消订单，租金与押金全额退还',
+                  'REFUNDED', DATE_ADD(c_at, INTERVAL 25 MINUTE), DATE_ADD(c_at, INTERVAL 35 MINUTE), 'MOCK_WECHAT', '模拟取消退款',
+                  DATE_ADD(c_at, INTERVAL 35 MINUTE));
+        END IF;
+      END IF;
+
+      -- 信用事件抽样（每 20 单），避免历史数据把分数顶到上限
+      IF i % 20 = 0 THEN
+        SET sc = (SELECT credit_score FROM sys_user WHERE id = u_id);
+        IF st = 'COMPLETED' THEN
+          INSERT INTO credit_log (user_id, action_code, change_type, score_before, score_change, score_after, order_id, dedup_key, reason, create_time)
+          VALUES (u_id, 'ORDER_FINISH', 'EVENT', sc, 2, LEAST(150, sc + 2), ord_id, '', '订单完成', TIMESTAMP(e_date, '11:30:00'));
+          UPDATE sys_user SET credit_score = LEAST(150, sc + 2) WHERE id = u_id;
+        ELSEIF st = 'OVERDUE' THEN
+          INSERT INTO credit_log (user_id, action_code, change_type, score_before, score_change, score_after, order_id, dedup_key, reason, create_time)
+          VALUES (u_id, 'OVERDUE', 'EVENT', sc, -3, GREATEST(0, sc - 3), ord_id, '1', CONCAT('逾期未归还 ', od, ' 天'), TIMESTAMP(e_date, '23:59:00'));
+          UPDATE sys_user SET credit_score = GREATEST(0, sc - 3) WHERE id = u_id;
+        END IF;
+      END IF;
+
+      SET i = i + 1;
+    END IF;
   END WHILE;
 END$$
 DELIMITER ;
 
 CALL seed_orders(300);
 DROP PROCEDURE seed_orders;
+
+-- ---------------------------------------------------------------------
+-- 6.1 车辆状态与订单对齐（occupied == status 2）
+--     有进行中订单的车 → 2 已租出；其余保持 1 可租；维保/下架在 §3 已定
+-- ---------------------------------------------------------------------
+UPDATE vehicle v
+SET v.status = 2
+WHERE v.deleted = 0
+  AND v.status = 1
+  AND EXISTS (SELECT 1 FROM order_item oi
+               JOIN lease_order o ON o.id = oi.order_id
+              WHERE oi.vehicle_id = v.id AND o.deleted = 0
+                AND o.status IN ('IN_USE', 'WAIT_RETURN', 'OVERDUE'));
+
+-- 累计出租次数改为真实口径（历史订单里出现过即算一次）
+UPDATE vehicle v
+JOIN (SELECT oi.vehicle_id, COUNT(DISTINCT oi.order_id) AS cnt
+        FROM order_item oi
+        JOIN lease_order o ON o.id = oi.order_id
+       WHERE o.deleted = 0 AND o.status <> 'CANCELLED' AND o.pay_time IS NOT NULL
+       GROUP BY oi.vehicle_id) x ON x.vehicle_id = v.id
+SET v.rent_count = v.rent_count + x.cnt;
+
+-- 保养台账：为维保车辆补一条进行中的记录
+INSERT INTO vehicle_maintenance (vehicle_id, maint_type, maint_date, mileage, cost, content, operator_id, next_date, remark)
+SELECT v.id, 'REPAIR', DATE_SUB(CURDATE(), INTERVAL 2 DAY), v.current_mileage, 1250.00,
+       '空调压缩机异响，拆检更换', 2, NULL, '维保中，暂停出租'
+FROM vehicle v WHERE v.id = 18;
 
 -- ---------------------------------------------------------------------
 -- 7. 订单评价（取最近 12 条已完成订单，一单一评）
@@ -412,6 +611,23 @@ INSERT INTO operation_log (user_id, username, module, operation, method, request
 -- 10. 信用分最终校准（保证恒等式成立，且等级与阈值一致）
 --     credit_score = clamp(100 + Σ credit_log.score_change, 0, 150)
 -- ---------------------------------------------------------------------
+-- 10.1 先补一条"差额"日志，把 6 个演示账号钉到文档约定的分值：
+--      订单抽样会给部分用户加/减分，直接 UPDATE 会让恒等式（100+Σ）不成立，
+--      补一条校准日志后，下面的重算自然落到目标值。
+INSERT INTO credit_log (user_id, action_code, change_type, score_before, score_change, score_after, reason, create_time)
+SELECT u.id, 'ADMIN_ADJUST', 'ADMIN',
+       100 + IFNULL(x.s, 0),
+       t.target - (100 + IFNULL(x.s, 0)),
+       t.target,
+       CONCAT('演示数据校准：对齐初始分值 ', t.target),
+       DATE_SUB(NOW(), INTERVAL 12 HOUR)
+FROM sys_user u
+LEFT JOIN (SELECT user_id, SUM(score_change) AS s FROM credit_log GROUP BY user_id) x ON x.user_id = u.id
+JOIN (SELECT 4 AS uid, 128 AS target
+      UNION ALL SELECT 5, 112 UNION ALL SELECT 6, 92
+      UNION ALL SELECT 7, 74  UNION ALL SELECT 8, 100 UNION ALL SELECT 9, 138) t ON t.uid = u.id
+WHERE t.target <> 100 + IFNULL(x.s, 0);
+
 UPDATE sys_user u
 LEFT JOIN (SELECT user_id, SUM(score_change) AS s FROM credit_log GROUP BY user_id) x ON x.user_id = u.id
 SET u.credit_score = LEAST(150, GREATEST(0, 100 + IFNULL(x.s, 0)));
@@ -444,4 +660,54 @@ SELECT credit_level_snapshot AS 等级, COUNT(*) AS 订单量,
        ROUND(SUM(deposit_amount), 2) AS 押金合计
 FROM lease_order GROUP BY credit_level_snapshot ORDER BY 订单量 DESC;
 
-SELECT status AS 订单状态, COUNT(*) AS 数量 FROM lease_order GROUP BY status ORDER BY 数量 DESC;
+SELECT status AS 订单状态, COUNT(*) AS 数量, MIN(start_date) AS 最早取车, MAX(end_date) AS 最晚还车
+FROM lease_order GROUP BY status ORDER BY 数量 DESC;
+
+-- 11.1 数据一致性自检：全部应为 0
+SELECT '同车档期重叠' AS 检查项, COUNT(*) AS 异常数 FROM (
+    -- 逾期单的车至今未还，实际占用到"今天"，比较时要用有效结束日
+    SELECT a.vehicle_id
+      FROM order_item a
+      JOIN lease_order oa ON oa.id = a.order_id AND oa.deleted = 0 AND oa.status <> 'CANCELLED'
+      JOIN order_item b  ON b.vehicle_id = a.vehicle_id AND b.order_id > a.order_id
+      JOIN lease_order ob ON ob.id = b.order_id AND ob.deleted = 0 AND ob.status <> 'CANCELLED'
+     WHERE oa.start_date < IF(ob.status = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), ob.end_date)
+       AND IF(oa.status = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), oa.end_date) > ob.start_date
+     GROUP BY a.vehicle_id) t
+UNION ALL
+SELECT '订单状态与日期矛盾', COUNT(*) FROM lease_order WHERE deleted = 0 AND (
+       (status = 'COMPLETED'   AND (end_date >= CURDATE() OR finish_time IS NULL))
+    OR (status = 'IN_USE'      AND (start_date > CURDATE() OR end_date <= CURDATE() OR pickup_time IS NULL))
+    OR (status = 'OVERDUE'     AND end_date >= CURDATE())
+    OR (status = 'WAIT_PICKUP' AND start_date <= CURDATE())
+    OR (status = 'CANCELLED'   AND cancel_time IS NULL))
+UNION ALL
+SELECT '车辆状态与在租订单不符', COUNT(*) FROM vehicle v WHERE v.deleted = 0 AND (
+       (v.status = 2 AND NOT EXISTS (SELECT 1 FROM order_item oi JOIN lease_order o ON o.id = oi.order_id
+                                      WHERE oi.vehicle_id = v.id AND o.deleted = 0
+                                        AND o.status IN ('IN_USE','WAIT_RETURN','OVERDUE')))
+    OR (v.status = 1 AND EXISTS     (SELECT 1 FROM order_item oi JOIN lease_order o ON o.id = oi.order_id
+                                      WHERE oi.vehicle_id = v.id AND o.deleted = 0
+                                        AND o.status IN ('IN_USE','WAIT_RETURN','OVERDUE'))))
+UNION ALL
+SELECT '订单金额与明细不符', COUNT(*) FROM lease_order o
+ WHERE o.deleted = 0 AND o.rent_amount <> (SELECT IFNULL(SUM(oi.rent_amount), 0) FROM order_item oi WHERE oi.order_id = o.id)
+UNION ALL
+SELECT '订单网点与车辆网点不符', COUNT(*) FROM (
+    SELECT o.id FROM lease_order o
+      JOIN order_item oi ON oi.order_id = o.id
+      JOIN vehicle v ON v.id = oi.vehicle_id
+     WHERE o.deleted = 0 AND o.store_id <> v.store_id
+     GROUP BY o.id) t
+UNION ALL
+SELECT '信用分与日志不闭合', COUNT(*) FROM sys_user u
+  LEFT JOIN (SELECT user_id, SUM(score_change) AS s FROM credit_log GROUP BY user_id) x ON x.user_id = u.id
+ WHERE u.credit_score <> LEAST(150, GREATEST(0, 100 + IFNULL(x.s, 0)));
+
+-- 11.2 车日利用率：被占用车日 ÷ 可租车日（近 45 天，仅统计非取消订单）
+SELECT
+    ROUND(100 * SUM(GREATEST(0, DATEDIFF(LEAST(o.end_date, DATE_ADD(CURDATE(), INTERVAL 1 DAY)),
+                                       GREATEST(o.start_date, DATE_SUB(CURDATE(), INTERVAL 44 DAY)))))
+          / ((SELECT COUNT(*) FROM vehicle WHERE deleted = 0 AND status IN (1, 2)) * 45), 1) AS 近45天车日利用率
+FROM lease_order o
+WHERE o.deleted = 0 AND o.status <> 'CANCELLED';

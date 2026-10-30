@@ -89,7 +89,9 @@
         <div class="card-head">
           <div>
             <h3>车辆状态</h3>
-            <p class="card-desc">在册 {{ data.kpi.vehicleTotal ?? 0 }} 台，出租率 {{ fmtRate(data.kpi.rentRate) }}</p>
+            <p class="card-desc">
+              在册 {{ data.kpi.vehicleTotal ?? 0 }} 台，当前出租率 {{ fmtRate(data.kpi.rentRate) }}（瞬时快照）
+            </p>
           </div>
         </div>
         <ChartBox :option="vehicleOption" height="280px" />
@@ -102,25 +104,30 @@
         <div class="card-head">
           <div>
             <h3>网点经营</h3>
-            <p class="card-desc">单车产出 = 租金实收 ÷ 在册车辆数</p>
+            <p class="card-desc">车日利用率 = 占用车日 ÷ 可租车日，比单车产出更能反映资产效率</p>
           </div>
         </div>
         <el-table :data="data.stores" size="small" class="store-table">
-          <el-table-column prop="storeName" label="网点" min-width="120" />
-          <el-table-column prop="vehicleCount" label="车辆" width="64" align="center" />
-          <el-table-column prop="orderCount" label="订单" width="64" align="center" />
-          <el-table-column label="租金实收" width="106" align="right">
+          <el-table-column prop="storeName" label="网点" min-width="100" />
+          <el-table-column prop="vehicleCount" label="车辆" width="52" align="center" />
+          <el-table-column prop="orderCount" label="订单" width="52" align="center" />
+          <el-table-column label="租金实收" width="92" align="right">
             <template #default="{ row }">{{ money(row.rentAmount) }}</template>
           </el-table-column>
-          <el-table-column label="单车产出" width="100" align="right">
+          <el-table-column label="车日利用率" width="86" align="center">
+            <template #default="{ row }">
+              <span :class="utilClass(row.utilizationRate)">{{ fmtRate(row.utilizationRate) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="单车产出" width="88" align="right">
             <template #default="{ row }">{{ money(row.perVehicle) }}</template>
           </el-table-column>
-          <el-table-column label="完成率" width="86" align="center">
+          <el-table-column label="完成率" width="76" align="center">
             <template #default="{ row }">
               <span :class="rateClass(row.completeRate)">{{ fmtRate(row.completeRate) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="逾期" width="64" align="center">
+          <el-table-column label="逾期" width="52" align="center">
             <template #default="{ row }">
               <span :class="{ danger: row.overdueCount > 0 }">{{ row.overdueCount }}</span>
             </template>
@@ -204,6 +211,17 @@ function rateClass(v) {
   return 'danger'
 }
 
+/**
+ * 车日利用率的健康区间与完成率不同：租车行业 55%~70% 属于正常，
+ * 用完成率的 75/60 阈值会把正常网点标成红色，所以单独一套阈值。
+ */
+function utilClass(v) {
+  if (v === null || v === undefined) return ''
+  if (v >= 60) return 'good'
+  if (v >= 45) return 'warn'
+  return 'danger'
+}
+
 /* ==================== 指标卡 ==================== */
 
 const kpiCards = computed(() => {
@@ -239,11 +257,11 @@ const kpiCards = computed(() => {
       tip: '已完成订单 ÷ 所选范围内订单总数'
     },
     {
-      label: '车辆出租率',
-      value: fmtRate(k.rentRate),
-      foot: `${k.vehicleRented ?? 0} / ${k.vehicleTotal ?? 0} 台在租`,
+      label: '车日利用率',
+      value: fmtRate(k.utilizationRate),
+      foot: `近 ${k.utilizationDays ?? data.value.days ?? 0} 天 · ${k.occupiedVehicleDays ?? 0} 车日 / ${k.rentableVehicles ?? 0} 台可租`,
       tone: 'tone-orange',
-      tip: '当前已租出车辆 ÷ 在册车辆，是瞬时快照，不是时间加权利用率'
+      tip: '被占用车日 ÷ 可租车日（可租车辆 × 天数）。与"出租率"不同，它按天数加权，取消订单不占车日，逾期未还按占用到今'
     },
     {
       label: '逾期订单',

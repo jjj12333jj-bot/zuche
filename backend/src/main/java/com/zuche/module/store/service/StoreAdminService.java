@@ -28,6 +28,9 @@ import java.math.RoundingMode;
 @RequiredArgsConstructor
 public class StoreAdminService {
 
+    /** 车日利用率的统计窗口：近 30 天 */
+    private static final int UTIL_DAYS = 30;
+
     private final StoreAdminMapper storeAdminMapper;
     private final OrderService orderService;
 
@@ -42,6 +45,14 @@ public class StoreAdminService {
         // 比率与派生值放这里算，SQL 只负责捞数
         int total = nz(vo.getVehicleTotal());
         vo.setRentRate(total <= 0 ? null : round(nz(vo.getVehicleRented()) * 100d / total));
+
+        // 车日利用率：分母是"可租车辆 × 30 天"，维保和下架的日子不算可租车日
+        int rentable = nz(vo.getRentableVehicles());
+        vo.setRentableVehicles(rentable);
+        vo.setOccupiedVehicleDays(nz(vo.getOccupiedVehicleDays()));
+        int capacity = rentable * UTIL_DAYS;
+        vo.setUtilizationRate(capacity <= 0 ? null : round(nz(vo.getOccupiedVehicleDays()) * 100d / capacity));
+
         vo.setTodoCount(nz(vo.getPendingPickup()) + nz(vo.getPendingReturn()) + nz(vo.getOverdue()));
 
         // 空值兜底，前端就不用到处写 ?? 0

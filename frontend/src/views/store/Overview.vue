@@ -69,7 +69,9 @@
         </div>
 
         <p class="hint">
-          出租率 {{ fmtRate(data.rentRate) }}（已租出 ÷ 在册），是当前瞬时快照，不是时间加权利用率。
+          出租率 {{ fmtRate(data.rentRate) }}（已租出 ÷ 在册）是当前瞬时快照；
+          近 30 天车日利用率 {{ fmtRate(data.utilizationRate) }}（{{ data.occupiedVehicleDays || 0 }} 车日 ÷
+          {{ data.rentableVehicles || 0 }} 台可租 × 30 天）才是时间加权口径。
         </p>
       </section>
 
@@ -149,7 +151,7 @@ const cards = computed(() => {
     {
       label: '车辆出租率',
       value: fmtRate(d.rentRate),
-      foot: `${d.vehicleRented ?? 0} / ${d.vehicleTotal ?? 0} 台在租`,
+      foot: `${d.vehicleRented ?? 0} / ${d.vehicleTotal ?? 0} 台在租 · 车日 ${fmtRate(d.utilizationRate)}`,
       tone: 'tone-cyan'
     },
     {

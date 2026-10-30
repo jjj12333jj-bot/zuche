@@ -39,6 +39,20 @@
             (SELECT COUNT(*) FROM lease_order o
               WHERE o.store_id = s.id AND o.deleted = 0 AND o.status = 'OVERDUE')       AS overdue,
 
+            /* ---------- 车日利用率（近 30 天，时间加权口径） ---------- */
+            /* 取消订单不占车日；逾期未还的车按占用到今天算 */
+            (SELECT COUNT(*) FROM vehicle v
+              WHERE v.store_id = s.id AND v.deleted = 0 AND v.status IN (1, 2))          AS rentable_vehicles,
+            (SELECT CAST(COALESCE(SUM(GREATEST(0, DATEDIFF(
+                        LEAST(IF(o2.status = 'OVERDUE', CURDATE() + INTERVAL 1 DAY, o2.end_date),
+                              CURDATE() + INTERVAL 1 DAY),
+                        GREATEST(o2.start_date, CURDATE() - INTERVAL 29 DAY)))), 0) AS SIGNED)
+               FROM lease_order o2
+              WHERE o2.store_id = s.id AND o2.deleted = 0 AND o2.status &lt;&gt; 'CANCELLED'
+                AND o2.start_date &lt; CURDATE() + INTERVAL 1 DAY
+                AND IF(o2.status = 'OVERDUE', CURDATE() + INTERVAL 1 DAY, o2.end_date) &gt; CURDATE() - INTERVAL 29 DAY
+            )                                                                            AS occupied_vehicle_days,
+
             /* ---------- 今日 ---------- */
             /* 用半开区间而不是 DATE(create_time) = CURDATE()，后者会让索引用不上 */
             (SELECT COUNT(*) FROM lease_order o

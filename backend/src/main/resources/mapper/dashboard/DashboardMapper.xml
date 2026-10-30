@@ -114,13 +114,14 @@
         WHERE deleted = 0 AND create_time &gt;= #{startDate}
     </select>
 
-    <!-- 车辆状态：1 可租 / 2 已租 / 3 维保 -->
+    <!-- 车辆状态：1 可租 / 2 已租 / 3 维保 / 0 下架 -->
     <select id="selectVehicleStatus" resultType="com.zuche.module.dashboard.vo.NameValueVO">
         SELECT
             CASE v.status
                 WHEN 1 THEN '可租'
                 WHEN 2 THEN '已租出'
                 WHEN 3 THEN '维保中'
+                WHEN 0 THEN '下架'
                 ELSE '其他'
             END                                     AS name,
             CAST(COUNT(*) AS SIGNED)                AS value
@@ -132,25 +133,59 @@
 
     <!--
       网点经营。
-      这里刻意不给"车日利用率"：种子数据里同一台车存在时间重叠的订单，
-      按车日算会得到 500% 以上的数字，展示出来是错的。
-      改用"单车产出"= 租金 / 车辆数，口径干净且经得起追问。
+      车日利用率的分子分母都在 SQL 里算：分子是窗口内"被占用车日"，分母是
+      可租车辆 × 统计天数（天数由 service 传入，已经裁到有数据的区间）。
+      种子数据保证同车不重叠，所以 SUM(DATEDIFF) 不会重复计数。
     -->
     <select id="selectStoreStats" resultType="com.zuche.module.dashboard.vo.StoreStatVO">
         SELECT
             s.id                                                                    AS storeId,
             s.store_name                                                            AS storeName,
             (SELECT COUNT(*) FROM vehicle v WHERE v.store_id = s.id AND v.deleted = 0) AS vehicleCount,
+            (SELECT COUNT(*) FROM vehicle v WHERE v.store_id = s.id AND v.deleted = 0
+               AND v.status IN (1, 2))                                              AS rentableVehicles,
             CAST(COUNT(o.id) AS SIGNED)                                             AS orderCount,
             ROUND(COALESCE(SUM(CASE WHEN o.pay_time IS NOT NULL THEN o.rent_amount ELSE 0 END), 0), 2) AS rentAmount,
             CAST(COALESCE(SUM(CASE WHEN COALESCE(o.overdue_days, 0) &gt; 0 THEN 1 ELSE 0 END), 0) AS SIGNED) AS overdueCount,
-            CAST(COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS SIGNED)        AS completedCount
+            CAST(COALESCE(SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS SIGNED)        AS completedCount,
+            (SELECT CAST(COALESCE(SUM(GREATEST(0, DATEDIFF(
+                        LEAST(IF(x.status = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), x.end_date),
+                              DATE_ADD(CURDATE(), INTERVAL 1 DAY)),
+                        GREATEST(x.start_date, #{utilStartDate})))), 0) AS SIGNED)
+               FROM lease_order x
+              WHERE x.store_id = s.id AND x.deleted = 0 AND x.status &lt;&gt; 'CANCELLED'
+                AND x.start_date &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                AND IF(x.status = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), x.end_date) &gt; #{utilStartDate}
+            )                                                                       AS occupiedVehicleDays
         FROM store s
         LEFT JOIN lease_order o
                ON o.store_id = s.id AND o.deleted = 0 AND o.create_time &gt;= #{startDate}
         WHERE s.deleted = 0
         GROUP BY s.id, s.store_name
         ORDER BY s.id
+    </select>
+
+    <!-- 车日利用率分子：窗口内被占用车日（取消不占；逾期按占用到今天算） -->
+    <select id="selectOccupiedVehicleDays" resultType="java.lang.Integer">
+        SELECT CAST(COALESCE(SUM(GREATEST(0, DATEDIFF(
+                    LEAST(IF(o.status = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), o.end_date),
+                          DATE_ADD(CURDATE(), INTERVAL 1 DAY)),
+                    GREATEST(o.start_date, #{startDate})))), 0) AS SIGNED)
+          FROM lease_order o
+         WHERE o.deleted = 0
+           AND o.status &lt;&gt; 'CANCELLED'
+           AND o.start_date &lt; DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+           AND IF(o.status = 'OVERDUE', DATE_ADD(CURDATE(), INTERVAL 1 DAY), o.end_date) &gt; #{startDate}
+    </select>
+
+    <!-- 分母基数：可租车辆（下架、维保期间不算可租车日） -->
+    <select id="selectRentableVehicles" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM vehicle WHERE deleted = 0 AND status IN (1, 2)
+    </select>
+
+    <!-- 平台首单日期：窗口不能早于它，否则分母里全是"不可能有单"的历史空档 -->
+    <select id="selectFirstOrderDate" resultType="java.time.LocalDate">
+        SELECT MIN(start_date) FROM lease_order WHERE deleted = 0
     </select>
 
     <!-- 车型营收排行：租金只算已支付的，未支付订单不构成收入 -->
