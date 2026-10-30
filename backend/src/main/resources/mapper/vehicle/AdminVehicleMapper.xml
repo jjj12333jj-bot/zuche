@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.vehicle.mapper.AdminVehicleMapper">
+
+    <!-- ==================================================================
+         品牌：列表带车型数 / 车辆数 / 可租数
+         子查询而不是 LEFT JOIN + GROUP BY：品牌只有 9 条，子查询可读性更好，
+         也不会因为多表 join 把 COUNT 算重。
+         ================================================================== -->
+    <select id="selectBrandPage" resultType="com.zuche.module.vehicle.vo.BrandManageVO">
+        SELECT b.id,
+               b.brand_name,
+               b.brand_logo,
+               b.initial,
+               b.sort_no,
+               b.status,
+               b.create_time,
+               (SELECT COUNT(*) FROM vehicle_model m
+                 WHERE m.brand_id = b.id AND m.deleted = 0) AS model_count,
+               (SELECT COUNT(*) FROM vehicle v
+                 WHERE v.brand_id = b.id AND v.deleted = 0) AS vehicle_count,
+               (SELECT COUNT(*) FROM vehicle v
+                 WHERE v.brand_id = b.id AND v.deleted = 0 AND v.status = 1) AS rentable_count
+          FROM vehicle_brand b
+         WHERE b.deleted = 0
+        <if test="q.status != null">
+            AND b.status = #{q.status}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (b.brand_name LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR b.initial LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+         ORDER BY b.sort_no ASC, b.id ASC
+    </select>
+
+    <select id="selectBrandOptions" resultType="com.zuche.module.vehicle.vo.BrandManageVO">
+        SELECT b.id, b.brand_name, b.brand_logo, b.initial, b.sort_no, b.status
+          FROM vehicle_brand b
+         WHERE b.deleted = 0 AND b.status = 1
+         ORDER BY b.sort_no ASC, b.id ASC
+    </select>
+
+    <!-- ==================================================================
+         车型：带品牌名、车辆数、在库最低日租金
+         min_daily_price 用来暴露「车型指导价 129，实际在库车 199」这种脱节
+         ================================================================== -->
+    <select id="selectModelPage" resultType="com.zuche.module.vehicle.vo.ModelManageVO">
+        SELECT m.id,
+               m.brand_id,
+               b.brand_name,
+               m.model_name,
+               m.category_code,
+               m.seats,
+               m.gearbox,
+               m.fuel_type,
+               m.displacement,
+               m.guide_price,
+               m.deposit,
+               m.cover_image,
+               m.description,
+               m.sort_no,
+               m.status,
+               m.create_time,
+               (SELECT COUNT(*) FROM vehicle v
+                 WHERE v.model_id = m.id AND v.deleted = 0) AS vehicle_count,
+               (SELECT MIN(v.daily_price) FROM vehicle v
+                 WHERE v.model_id = m.id AND v.deleted = 0) AS min_daily_price
+          FROM vehicle_model m
+          LEFT JOIN vehicle_brand b ON b.id = m.brand_id AND b.deleted = 0
+         WHERE m.deleted = 0
+        <if test="q.brandId != null">
+            AND m.brand_id = #{q.brandId}
+        </if>
+        <if test="q.categoryCode != null and q.categoryCode != ''">
+            AND m.category_code = #{q.categoryCode}
+        </if>
+        <if test="q.status != null">
+            AND m.status = #{q.status}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (m.model_name LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR b.brand_name LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+         ORDER BY b.sort_no ASC, m.sort_no ASC, m.id ASC
+    </select>
+
+    <select id="selectModelOptions" resultType="com.zuche.module.vehicle.vo.ModelManageVO">
+        SELECT m.id, m.brand_id, b.brand_name, m.model_name,
+               m.category_code, m.guide_price, m.deposit, m.status
+          FROM vehicle_model m
+          LEFT JOIN vehicle_brand b ON b.id = m.brand_id AND b.deleted = 0
+         WHERE m.deleted = 0 AND m.status = 1
+        <if test="brandId != null">
+            AND m.brand_id = #{brandId}
+        </if>
+         ORDER BY b.sort_no ASC, m.sort_no ASC, m.id ASC
+    </select>
+
+    <!-- ==================================================================
+         车辆档案：跨网点 + 当前占用订单 + 保单到期日 + 下次保养日
+         活跃订单用子查询而非 join：一台车只可能有一张未结束订单，
+         用 join 万一同车多单会把行数放大（seed v1 就踩过这个坑）。
+         ================================================================== -->
+    <select id="selectVehiclePage" resultType="com.zuche.module.vehicle.vo.AdminVehicleVO">
+        SELECT v.id,
+               v.vehicle_no,
+               v.license_plate,
+               v.vin,
+               v.color,
+               v.brand_id,
+               b.brand_name,
+               v.model_id,
+               m.model_name,
+               m.category_code,
+               v.store_id,
+               s.store_name,
+               v.current_mileage,
+               v.daily_price,
+               v.deposit,
+               v.discount_rate,
+               v.register_date,
+               v.status,
+               v.rent_count,
+               v.view_count,
+               v.description,
+               v.create_time,
+               (SELECT o.order_no FROM order_item oi
+                  JOIN lease_order o ON o.id = oi.order_id AND o.deleted = 0
+                 WHERE oi.vehicle_id = v.id
+                   AND o.status IN ('WAIT_PAY', 'WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+                 ORDER BY o.start_date ASC LIMIT 1) AS active_order_no,
+               (SELECT o.status FROM order_item oi
+                  JOIN lease_order o ON o.id = oi.order_id AND o.deleted = 0
+                 WHERE oi.vehicle_id = v.id
+                   AND o.status IN ('WAIT_PAY', 'WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+                 ORDER BY o.start_date ASC LIMIT 1) AS active_order_status,
+               (SELECT o.start_date FROM order_item oi
+                  JOIN lease_order o ON o.id = oi.order_id AND o.deleted = 0
+                 WHERE oi.vehicle_id = v.id
+                   AND o.status IN ('WAIT_PAY', 'WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+                 ORDER BY o.start_date ASC LIMIT 1) AS active_start_date,
+               (SELECT o.end_date FROM order_item oi
+                  JOIN lease_order o ON o.id = oi.order_id AND o.deleted = 0
+                 WHERE oi.vehicle_id = v.id
+                   AND o.status IN ('WAIT_PAY', 'WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+                 ORDER BY o.start_date ASC LIMIT 1) AS active_end_date,
+               (SELECT MAX(i.end_date) FROM vehicle_insurance i
+                 WHERE i.vehicle_id = v.id AND i.deleted = 0 AND i.status = 1) AS insurance_end_date,
+               (SELECT mt.next_date FROM vehicle_maintenance mt
+                 WHERE mt.vehicle_id = v.id AND mt.deleted = 0 AND mt.next_date IS NOT NULL
+                 ORDER BY mt.next_date DESC LIMIT 1) AS next_maintain_date
+          FROM vehicle v
+          LEFT JOIN vehicle_model m ON m.id = v.model_id AND m.deleted = 0
+          LEFT JOIN vehicle_brand b ON b.id = v.brand_id AND b.deleted = 0
+          LEFT JOIN store s ON s.id = v.store_id AND s.deleted = 0
+         WHERE v.deleted = 0
+        <if test="q.status != null">
+            AND v.status = #{q.status}
+        </if>
+        <if test="q.storeId != null">
+            AND v.store_id = #{q.storeId}
+        </if>
+        <if test="q.brandId != null">
+            AND v.brand_id = #{q.brandId}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (v.license_plate LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR v.vehicle_no LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR v.vin LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR m.model_name LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR b.brand_name LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+         ORDER BY v.store_id ASC, v.status ASC, v.id ASC
+    </select>
+
+    <!-- ==================================================================
+         保养维修台账：平台视角，可按网点过滤
+         ================================================================== -->
+    <select id="selectMaintenancePage" resultType="com.zuche.module.vehicle.vo.AdminMaintenanceVO">
+        SELECT mt.id,
+               mt.vehicle_id,
+               v.vehicle_no,
+               v.license_plate,
+               m.model_name,
+               b.brand_name,
+               v.store_id,
+               s.store_name,
+               mt.maint_type,
+               mt.maint_date,
+               mt.mileage,
+               mt.cost,
+               mt.content,
+               u.real_name AS operator_name,
+               mt.next_date,
+               mt.remark,
+               mt.create_time
+          FROM vehicle_maintenance mt
+          LEFT JOIN vehicle v ON v.id = mt.vehicle_id
+          LEFT JOIN vehicle_model m ON m.id = v.model_id AND m.deleted = 0
+          LEFT JOIN vehicle_brand b ON b.id = v.brand_id AND b.deleted = 0
+          LEFT JOIN store s ON s.id = v.store_id AND s.deleted = 0
+          LEFT JOIN sys_user u ON u.id = mt.operator_id
+         WHERE mt.deleted = 0
+        <if test="q.maintType != null and q.maintType != ''">
+            AND mt.maint_type = #{q.maintType}
+        </if>
+        <if test="q.storeId != null">
+            AND v.store_id = #{q.storeId}
+        </if>
+        <if test="q.vehicleId != null">
+            AND mt.vehicle_id = #{q.vehicleId}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (v.license_plate LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR v.vehicle_no LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR mt.content LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+         ORDER BY mt.maint_date DESC, mt.id DESC
+    </select>
+
+    <!-- ==================================================================
+         保险记录：days_to_expire 用 DATEDIFF 在库里算，前端不再做时区减法
+         expiringSoon 只看「生效中且 30 天内到期（含已过期）」
+         ================================================================== -->
+    <select id="selectInsurancePage" resultType="com.zuche.module.vehicle.vo.InsuranceVO">
+        SELECT i.id,
+               i.vehicle_id,
+               v.vehicle_no,
+               v.license_plate,
+               b.brand_name,
+               m.model_name,
+               v.store_id,
+               s.store_name,
+               i.insurance_type,
+               i.insurer,
+               i.policy_no,
+               i.start_date,
+               i.end_date,
+               i.premium,
+               i.status,
+               i.create_time,
+               DATEDIFF(i.end_date, CURDATE()) AS days_to_expire
+          FROM vehicle_insurance i
+          LEFT JOIN vehicle v ON v.id = i.vehicle_id
+          LEFT JOIN vehicle_model m ON m.id = v.model_id AND m.deleted = 0
+          LEFT JOIN vehicle_brand b ON b.id = v.brand_id AND b.deleted = 0
+          LEFT JOIN store s ON s.id = v.store_id AND s.deleted = 0
+         WHERE i.deleted = 0
+        <if test="q.insuranceType != null and q.insuranceType != ''">
+            AND i.insurance_type = #{q.insuranceType}
+        </if>
+        <if test="q.storeId != null">
+            AND v.store_id = #{q.storeId}
+        </if>
+        <if test="q.status != null">
+            AND i.status = #{q.status}
+        </if>
+        <if test="q.expiringSoon != null and q.expiringSoon">
+            AND i.status = 1
+            AND i.end_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (v.license_plate LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR i.policy_no LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR i.insurer LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+         ORDER BY i.status DESC, i.end_date ASC, i.id DESC
+    </select>
+
+    <!-- ==================================================================
+         校验用计数
+         ================================================================== -->
+    <select id="countActiveOrdersOfVehicle" resultType="int">
+        SELECT COUNT(*)
+          FROM order_item oi
+          JOIN lease_order o ON o.id = oi.order_id AND o.deleted = 0
+         WHERE oi.vehicle_id = #{vehicleId}
+           AND o.status IN ('WAIT_PAY', 'WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+    </select>
+
+    <select id="countVehiclesOfModel" resultType="int">
+        SELECT COUNT(*) FROM vehicle WHERE model_id = #{modelId} AND deleted = 0
+    </select>
+
+    <select id="countModelsOfBrand" resultType="int">
+        SELECT COUNT(*) FROM vehicle_model WHERE brand_id = #{brandId} AND deleted = 0
+    </select>
+
+    <select id="countVehiclesOfBrand" resultType="int">
+        SELECT COUNT(*) FROM vehicle WHERE brand_id = #{brandId} AND deleted = 0
+    </select>
+
+    <select id="selectStoreIdOfVehicle" resultType="java.lang.Long">
+        SELECT store_id FROM vehicle WHERE id = #{vehicleId} AND deleted = 0
+    </select>
+
+    <!-- ==================================================================
+         全量统计：三个页面的顶部数字卡用，不受分页影响
+         ================================================================== -->
+    <select id="selectBrandStats" resultType="com.zuche.module.vehicle.vo.AdminVehicleStatsVO$BrandStats">
+        SELECT (SELECT COUNT(*) FROM vehicle_brand WHERE deleted = 0) AS total,
+               (SELECT COUNT(*) FROM vehicle_brand WHERE deleted = 0 AND status = 1) AS enabled,
+               (SELECT COUNT(*) FROM vehicle_brand WHERE deleted = 0 AND status = 0) AS disabled,
+               (SELECT COUNT(*) FROM vehicle WHERE deleted = 0) AS vehicles,
+               (SELECT COUNT(*) FROM vehicle WHERE deleted = 0 AND status = 1) AS rentable
+    </select>
+
+    <select id="selectMaintenanceStats" resultType="com.zuche.module.vehicle.vo.AdminVehicleStatsVO$MaintStats">
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN maint_type = 'MAINTAIN' THEN 1 ELSE 0 END) AS maintain,
+               SUM(CASE WHEN maint_type = 'REPAIR' THEN 1 ELSE 0 END) AS repair,
+               COALESCE(SUM(cost), 0) AS cost
+          FROM vehicle_maintenance
+         WHERE deleted = 0
+    </select>
+
+    <select id="selectInsuranceStats" resultType="com.zuche.module.vehicle.vo.AdminVehicleStatsVO$InsuranceStats">
+        SELECT COUNT(*) AS total,
+               SUM(CASE WHEN end_date &lt; CURDATE() THEN 1 ELSE 0 END) AS expired,
+               SUM(CASE WHEN end_date &gt;= CURDATE()
+                         AND end_date &lt;= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                        THEN 1 ELSE 0 END) AS soon,
+               COALESCE(SUM(premium), 0) AS premium
+          FROM vehicle_insurance
+         WHERE deleted = 0 AND status = 1
+    </select>
+
+</mapper>

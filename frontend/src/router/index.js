@@ -133,6 +133,41 @@ const routes = [
         meta: { title: '调车审批' }
       },
       {
+        // 车辆资产是菜单目录，本身没有页面，进来先落到车辆档案
+        path: 'vehicle',
+        redirect: '/admin/vehicle/list'
+      },
+      {
+        path: 'vehicle/brands',
+        name: 'AdminVehicleBrands',
+        component: () => import('@/views/admin/vehicle/BrandManage.vue'),
+        meta: { title: '品牌管理' }
+      },
+      {
+        path: 'vehicle/models',
+        name: 'AdminVehicleModels',
+        component: () => import('@/views/admin/vehicle/ModelManage.vue'),
+        meta: { title: '车型管理' }
+      },
+      {
+        path: 'vehicle/list',
+        name: 'AdminVehicleList',
+        component: () => import('@/views/admin/vehicle/VehicleArchive.vue'),
+        meta: { title: '车辆档案' }
+      },
+      {
+        path: 'vehicle/maintenance',
+        name: 'AdminVehicleMaintenance',
+        component: () => import('@/views/admin/vehicle/MaintenanceLedger.vue'),
+        meta: { title: '保养维修' }
+      },
+      {
+        path: 'vehicle/insurance',
+        name: 'AdminVehicleInsurance',
+        component: () => import('@/views/admin/vehicle/InsuranceList.vue'),
+        meta: { title: '保险记录' }
+      },
+      {
         path: ':pathMatch(.*)*',
         name: 'AdminPlaceholder',
         component: () => import('@/views/admin/Placeholder.vue'),

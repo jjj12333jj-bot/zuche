@@ -93,10 +93,19 @@ SELECT id, '/images/cars/gallery/interior.svg', 'INTERIOR', 2 FROM vehicle
 UNION ALL
 SELECT id, '/images/cars/gallery/rear.svg', 'EXTERIOR', 3 FROM vehicle;
 
--- 保险：每台车交强险 + 商业险，部分即将到期（用于到期提醒演示）
+-- 保险：每台车交强险 + 商业险
+-- id<=6 的交强险在 30 天内到期（到期提醒演示用），id>=7 的按 30+N 天均匀铺开；
+-- 车 23/24 的交强险已过期但仍是 status=1（现实中"忘了续保"就是这样），
+-- 用来验证列表能否把"已过期"和"即将到期"分开呈现。
 INSERT INTO vehicle_insurance (vehicle_id, insurance_type, insurer, policy_no, start_date, end_date, premium, status)
 SELECT id, 'COMPULSORY', '人保财险(模拟)', CONCAT('PICC-C-', LPAD(id, 6, '0')),
-       DATE_SUB(CURDATE(), INTERVAL 300 DAY), DATE_ADD(CURDATE(), INTERVAL (30 + id * 3) DAY),
+       DATE_SUB(CURDATE(), INTERVAL 300 DAY),
+       CASE
+           WHEN id = 23 THEN DATE_SUB(CURDATE(), INTERVAL 12 DAY)
+           WHEN id = 24 THEN DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+           WHEN id <= 6 THEN DATE_ADD(CURDATE(), INTERVAL (4 + id * 4) DAY)
+           ELSE DATE_ADD(CURDATE(), INTERVAL (30 + id * 3) DAY)
+       END,
        950.00, 1
 FROM vehicle
 UNION ALL

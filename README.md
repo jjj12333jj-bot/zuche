@@ -244,7 +244,12 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/orders/<orderId
 | `/vehicles/1` | 图集切换、价格/押金、参数表、门店信息、登录提示 |
 | `/register` | 表单校验、注册后自动登录并回首页 |
 | `/login` | 三个演示账号，登录后按角色跳转 |
-| `/admin/dashboard` | 左侧动态菜单、真实 KPI（24 台/9 品牌/4 网点）、占位模块 |
+| `/admin/dashboard` | 左侧动态菜单、真实 KPI（24 台/9 品牌/4 网点）、车日利用率 |
+| `/admin/vehicle/brands` | 品牌：9 个，带车型数与车辆数，重名拦/有车型不许删 |
+| `/admin/vehicle/models` | 车型：24 个，在库最低价 ≠ 指导价时标橙 |
+| `/admin/vehicle/list` | 车辆档案：24 台，当前订单/保单到期/下次保养一屏可见 |
+| `/admin/vehicle/maintenance` | 保养维修台账：13 条，登记自动推里程、维修自动置维保 |
+| `/admin/vehicle/insurance` | 保险：48 张，已过期 2 / 30 天内到期 6 用红橙区分 |
 | `/store/overview` | 网点管理员只看到网点管理菜单 |
 | `/checkout/1` | 下单页：选租期/归还网点/备注，右侧实时试算与信用减免 |
 | `/cashier/<orderId>` | 收银台：金额、支付方式、信用快照，支付后展示两条流水 |
