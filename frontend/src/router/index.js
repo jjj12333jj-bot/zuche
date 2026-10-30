@@ -103,6 +103,12 @@ const routes = [
         meta: { title: '数据看板' }
       },
       {
+        path: 'analytics',
+        name: 'AdminAnalytics',
+        component: () => import('@/views/admin/Analytics.vue'),
+        meta: { title: '智能分析' }
+      },
+      {
         path: 'credit/rules',
         name: 'AdminCreditRules',
         component: () => import('@/views/admin/credit/RuleConfig.vue'),

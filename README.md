@@ -245,6 +245,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/orders/<orderId
 | `/register` | 表单校验、注册后自动登录并回首页 |
 | `/login` | 三个演示账号，登录后按角色跳转 |
 | `/admin/dashboard` | 左侧动态菜单、真实 KPI（24 台/9 品牌/4 网点）、车日利用率 |
+| `/admin/analytics` | 智能分析：7×24 下单热力、车型偏好气泡矩阵、营收预测（区间覆盖率 81%） |
 | `/admin/vehicle/brands` | 品牌：9 个，带车型数与车辆数，重名拦/有车型不许删 |
 | `/admin/vehicle/models` | 车型：24 个，在库最低价 ≠ 指导价时标橙 |
 | `/admin/vehicle/list` | 车辆档案：24 台，当前订单/保单到期/下次保养一屏可见 |

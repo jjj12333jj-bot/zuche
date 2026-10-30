@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.analytics.mapper.AnalyticsMapper">
+
+    <!--
+      下单时段热力：星期 × 小时。
+      WEEKDAY() 返回 0=周一，加 1 换成 1=周一 的口径，前端不用再记这个偏移。
+      已取消的订单也算"下过单"——用户确实在那个时点产生了下单行为。
+    -->
+    <select id="selectOrderHeatmap" resultType="com.zuche.module.analytics.vo.HeatmapCellVO">
+        SELECT
+            WEEKDAY(o.create_time) + 1          AS weekday,
+            HOUR(o.create_time)                 AS hour,
+            CAST(COUNT(*) AS SIGNED)            AS orderCount,
+            ROUND(SUM(o.rent_amount), 2)        AS rentAmount
+        FROM lease_order o
+        WHERE o.deleted = 0 AND o.create_time &gt;= #{startDate}
+        GROUP BY WEEKDAY(o.create_time) + 1, HOUR(o.create_time)
+        ORDER BY weekday, hour
+    </select>
+
+    <!--
+      车型分类偏好。
+      订单量按 DISTINCT 订单去重（一单两车算一单），营收按明细累加（一单两车算两车钱），
+      两个口径都对：一个衡量需求次数，一个衡量真金白银。
+      在册车辆数走 vehicle + vehicle_model，跟订单维度无关，用子查询避免 JOIN 放大。
+    -->
+    <select id="selectModelPreference" resultType="com.zuche.module.analytics.vo.ModelPreferenceVO">
+        SELECT
+            t.category_code                                         AS categoryCode,
+            COALESCE(d.dict_label, t.category_code)                 AS categoryLabel,
+            COALESCE(d.dict_value, '#909399')                       AS color,
+            CAST(t.orders AS SIGNED)                                AS orderCount,
+            ROUND(t.rent, 2)                                        AS rentAmount,
+            ROUND(t.rent / NULLIF(t.orders, 0), 2)                  AS avgOrderAmount,
+            ROUND(t.avg_days, 1)                                    AS avgRentDays,
+            ROUND(t.avg_price, 2)                                   AS avgDailyPrice,
+            (SELECT COUNT(*) FROM vehicle v
+               JOIN vehicle_model m2 ON m2.id = v.model_id
+              WHERE v.deleted = 0 AND m2.category_code = t.category_code) AS vehicleCount
+        FROM (
+            SELECT
+                m.category_code,
+                COUNT(DISTINCT o.id)        AS orders,
+                SUM(oi.rent_amount)         AS rent,
+                AVG(o.rent_days)            AS avg_days,
+                AVG(oi.daily_price)         AS avg_price
+            FROM order_item oi
+            JOIN lease_order o ON o.id = oi.order_id
+            JOIN vehicle v      ON v.id = oi.vehicle_id
+            JOIN vehicle_model m ON m.id = v.model_id
+            WHERE o.deleted = 0 AND o.pay_time IS NOT NULL
+              AND o.create_time &gt;= #{startDate}
+            GROUP BY m.category_code
+        ) t
+        LEFT JOIN sys_dict_data d
+               ON d.dict_type = 'vehicle_category' AND d.dict_code = t.category_code
+        ORDER BY t.rent DESC
+    </select>
+
+    <!-- 每日租金实收：只算 SUCCESS 的租金流水，退款在 service 里不进趋势（退款不改变"当天做了多少生意"） -->
+    <select id="selectDailyRent" resultType="com.zuche.module.dashboard.vo.TrendPointVO">
+        SELECT
+            DATE_FORMAT(p.pay_time, '%Y-%m-%d')                     AS date,
+            ROUND(SUM(p.amount), 2)                                 AS rentAmount,
+            CAST(COUNT(DISTINCT p.order_id) AS SIGNED)               AS orderCount,
+            CAST(0 AS DECIMAL(10,2))                                 AS lateFee
+        FROM payment_record p
+        WHERE p.status = 'SUCCESS' AND p.pay_type = 'RENT'
+          AND p.pay_time &gt;= #{startDate}
+        GROUP BY DATE_FORMAT(p.pay_time, '%Y-%m-%d')
+        ORDER BY DATE_FORMAT(p.pay_time, '%Y-%m-%d')
+    </select>
+
+    <select id="selectFirstPaidDate" resultType="java.time.LocalDate">
+        SELECT MIN(DATE(pay_time)) FROM payment_record
+         WHERE status = 'SUCCESS' AND pay_type = 'RENT'
+    </select>
+
+</mapper>

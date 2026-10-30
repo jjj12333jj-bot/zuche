@@ -728,6 +728,7 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, perm
 (104, 10,  '调车申请',   'C', '/store/dispatch',     'store/DispatchApply',   'dispatch:apply',      'Switch',     4, 1, 1),
 (20,  0,   '平台管理',   'M', '/admin',              NULL,                    NULL,                  'Setting',    20, 1, 1),
 (201, 20,  '数据看板',   'C', '/admin/dashboard',    'admin/Dashboard',       'dashboard:view',      'DataAnalysis', 1, 1, 1),
+(212, 20,  '智能分析',   'C', '/admin/analytics',    'admin/Analytics',       'analytics:view',      'TrendCharts', 2, 1, 1),
 (202, 20,  '信用风控',   'M', '/admin/credit',       NULL,                    NULL,                  'Medal',      2, 1, 1),
 (2021,202, '信用规则',   'C', '/admin/credit/rules', 'admin/credit/RuleConfig',   'credit:rule:list', 'Setting', 1, 1, 1),
 (2022,202, '用户信用',   'C', '/admin/credit/users', 'admin/credit/UserCredit',   'credit:user:list', 'User',    2, 1, 1),
@@ -752,6 +753,9 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, perm
 (20221,2022,'信用调整',  'F', NULL, NULL,             'credit:user:adjust',  NULL, 1, 0, 1),
 (20301,203, '调度审批',  'F', NULL, NULL,             'dispatch:approve',    NULL, 1, 0, 1),
 (20501,205, '订单关闭',  'F', NULL, NULL,             'order:close',         NULL, 1, 0, 1);
+
+-- 智能分析插在数据看板之后，原 202~211 整体顺延一位，保证"看板 → 智能分析 → 信用风控"的顺序
+UPDATE sys_menu SET sort_no = sort_no + 1 WHERE parent_id = 20 AND id BETWEEN 202 AND 211;
 
 -- 4) 角色菜单授权：管理员全量，用户只看前台，网点管理员看首页+订单+网点管理
 INSERT INTO sys_role_menu (role_id, menu_id) SELECT 3, id FROM sys_menu;
