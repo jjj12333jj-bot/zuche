@@ -35,3 +35,6 @@ frontend/vite.config.js.timestamp-*.mjs
 # ---- 数据库备份导出 ----
 sql/_bak*.sql
 *.dump
+
+# ---- WorkBuddy 内部工作记忆（不纳入代码仓库） ----
+.workbuddy/
