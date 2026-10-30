@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.store.mapper.StoreVehicleMapper">
+
+    <!--
+      网点车辆分页。
+
+      台账摘要与在租订单都用标量子查询：一台车最多十几条台账，
+      用 LEFT JOIN + GROUP BY 会把主查询的行数乘起来，
+      分页的 total 立刻就不对了。数据量小，标量子查询更稳。
+    -->
+    <select id="selectVehiclePage" resultType="com.zuche.module.store.vo.StoreVehicleVO">
+        SELECT
+            v.id,
+            v.vehicle_no,
+            v.license_plate,
+            v.color,
+            v.store_id,
+            v.daily_price,
+            v.deposit,
+            v.discount_rate,
+            v.current_mileage,
+            v.status,
+            v.rent_count,
+            v.register_date,
+            b.brand_name,
+            m.model_name,
+
+            (SELECT COUNT(*) FROM vehicle_maintenance vm
+              WHERE vm.vehicle_id = v.id AND vm.deleted = 0)                              AS maint_count,
+            (SELECT MAX(vm.maint_date) FROM vehicle_maintenance vm
+              WHERE vm.vehicle_id = v.id AND vm.deleted = 0)                              AS last_maint_date,
+            (SELECT MAX(vm.next_date) FROM vehicle_maintenance vm
+              WHERE vm.vehicle_id = v.id AND vm.deleted = 0 AND vm.next_date IS NOT NULL) AS next_maint_date,
+
+            /* 只有「已租出」的车才回填当前订单：车辆可用性以 vehicle.status 为准，
+               不在可租车辆上挂一张可能早已过期的历史订单，避免出现「可租 + 在租」的同屏矛盾 */
+            (CASE WHEN v.status = 2 THEN
+                (SELECT o.order_no FROM order_item oi
+                   JOIN lease_order o ON o.id = oi.order_id
+                  WHERE oi.vehicle_id = v.id AND o.deleted = 0
+                    AND o.status IN ('WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+                  ORDER BY o.id DESC LIMIT 1)
+             END)                                                                         AS active_order_no,
+            (CASE WHEN v.status = 2 THEN
+                (SELECT o.status FROM order_item oi
+                   JOIN lease_order o ON o.id = oi.order_id
+                  WHERE oi.vehicle_id = v.id AND o.deleted = 0
+                    AND o.status IN ('WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE')
+                  ORDER BY o.id DESC LIMIT 1)
+             END)                                                                         AS active_order_status
+        FROM vehicle v
+        LEFT JOIN vehicle_brand b ON b.id = v.brand_id AND b.deleted = 0
+        LEFT JOIN vehicle_model m ON m.id = v.model_id AND m.deleted = 0
+        WHERE v.deleted = 0
+          AND v.store_id = #{storeId}
+        <if test="q.status != null">
+          AND v.status = #{q.status}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+          AND (v.vehicle_no    LIKE CONCAT('%', #{q.keyword}, '%')
+            OR v.license_plate LIKE CONCAT('%', #{q.keyword}, '%')
+            OR b.brand_name    LIKE CONCAT('%', #{q.keyword}, '%')
+            OR m.model_name    LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+        <!-- 已租出的排最前（要盯），其次可租、维保、下架 -->
+        ORDER BY FIELD(v.status, 2, 1, 3, 0), v.id
+    </select>
+
+    <!-- 台账分页：按网点过滤，网点管理员只能看到自己店里的车 -->
+    <select id="selectMaintenancePage" resultType="com.zuche.module.store.vo.MaintenanceVO">
+        SELECT
+            vm.id,
+            vm.vehicle_id,
+            v.vehicle_no,
+            v.license_plate,
+            vm.maint_type,
+            vm.maint_date,
+            vm.mileage,
+            vm.cost,
+            vm.content,
+            vm.operator_id,
+            u.real_name  AS operator_name,
+            vm.next_date,
+            vm.remark,
+            vm.create_time
+        FROM vehicle_maintenance vm
+        JOIN vehicle v ON v.id = vm.vehicle_id AND v.deleted = 0
+        LEFT JOIN sys_user u ON u.id = vm.operator_id
+        WHERE vm.deleted = 0
+          AND v.store_id = #{storeId}
+        <if test="q.vehicleId != null">
+          AND vm.vehicle_id = #{q.vehicleId}
+        </if>
+        <if test="q.maintType != null and q.maintType != ''">
+          AND vm.maint_type = #{q.maintType}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+          AND (v.vehicle_no    LIKE CONCAT('%', #{q.keyword}, '%')
+            OR v.license_plate LIKE CONCAT('%', #{q.keyword}, '%')
+            OR vm.content      LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+        ORDER BY vm.maint_date DESC, vm.id DESC
+    </select>
+
+    <!--
+      调车申请分页。
+      storeId 为空表示平台视角（管理员看全部）；不为空时按网点过滤。
+      方向用 choose 而不是拼字符串，避免把用户输入的 direction 直接拼进 SQL。
+    -->
+    <select id="selectDispatchPage" resultType="com.zuche.module.store.vo.DispatchVO">
+        SELECT
+            d.id,
+            d.apply_no,
+            d.vehicle_id,
+            d.from_store_id,
+            d.to_store_id,
+            d.apply_user_id,
+            d.reason,
+            d.status,
+            d.audit_user_id,
+            d.audit_time,
+            d.audit_remark,
+            d.create_time,
+            v.vehicle_no,
+            v.license_plate,
+            m.model_name,
+            fs.store_name AS from_store_name,
+            ts.store_name AS to_store_name,
+            au.real_name AS apply_user_name,
+            pu.real_name AS audit_user_name
+        FROM dispatch_apply d
+        LEFT JOIN vehicle v       ON v.id = d.vehicle_id
+        LEFT JOIN vehicle_model m ON m.id = v.model_id
+        LEFT JOIN store fs        ON fs.id = d.from_store_id
+        LEFT JOIN store ts        ON ts.id = d.to_store_id
+        LEFT JOIN sys_user au     ON au.id = d.apply_user_id
+        LEFT JOIN sys_user pu     ON pu.id = d.audit_user_id
+        WHERE d.deleted = 0
+        <if test="storeId != null">
+            <choose>
+                <when test="q.direction == 'OUT'">
+                    AND d.from_store_id = #{storeId}
+                </when>
+                <when test="q.direction == 'IN'">
+                    AND d.to_store_id = #{storeId}
+                </when>
+                <otherwise>
+                    AND (d.from_store_id = #{storeId} OR d.to_store_id = #{storeId})
+                </otherwise>
+            </choose>
+        </if>
+        <if test="q.status != null and q.status != ''">
+            AND d.status = #{q.status}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (d.apply_no       LIKE CONCAT('%', #{q.keyword}, '%')
+              OR v.vehicle_no     LIKE CONCAT('%', #{q.keyword}, '%')
+              OR v.license_plate  LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+        <!-- 待审批置顶，其余按时间倒序 -->
+        ORDER BY FIELD(d.status, 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'), d.id DESC
+    </select>
+
+</mapper>

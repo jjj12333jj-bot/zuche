@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="hsl(229 34% 18%)"/><stop offset="1" stop-color="hsl(229 38% 30%)"/>
+    </linearGradient>
+    <linearGradient id="paint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f3a45" stop-opacity="1"/>
+      <stop offset="1" stop-color="#2f3a45" stop-opacity=".72"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0e1922"/><stop offset="1" stop-color="#28455c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <circle cx="700" cy="80" r="170" fill="url(#glow)"/>
+  <circle cx="84" cy="446" r="120" fill="#fff" opacity=".05"/>
+  <g opacity=".08" stroke="#fff">
+    <path d="M0 460 L800 300"/><path d="M0 500 L800 340"/><path d="M0 420 L800 260"/>
+  </g>
+
+  <text x="36" y="186" fill="#fff" fill-opacity=".07" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="180" font-weight="700">B</text>
+
+  
+  <g>
+    <ellipse cx="400" cy="414" rx="292" ry="22" fill="#000" opacity=".22"/>
+    <path d="M268 288 L326 214 Q341 196 366 196 H506 Q532 196 548 216 L600 288 Z" fill="url(#paint)" stroke="#000" stroke-opacity=".12" stroke-width="2"/>
+    <path d="M292 276 L336 210 Q346 200 362 200 H424 V276 Z" fill="#101b26"/>
+    <path d="M448 208 H504 Q522 208 534 224 L562 276 H448 Z" fill="#101b26"/>
+    <rect x="426" y="198" width="12" height="82" fill="url(#paint)" opacity=".9"/>
+    <path d="M104 342 Q104 304 144 296 L206 286 H596 Q652 292 678 304 Q700 312 700 340 V354 Q700 372 678 372 H126 Q104 372 104 354 Z"
+          fill="url(#paint)" stroke="#000" stroke-opacity=".14" stroke-width="2"/>
+    <path d="M120 330 L680 330" stroke="#fff" stroke-opacity=".22" stroke-width="3"/>
+    <path d="M430 292 V362" stroke="#000" stroke-opacity=".18" stroke-width="2"/>
+    <path d="M510 292 V362" stroke="#000" stroke-opacity=".14" stroke-width="2"/>
+    <rect x="392" y="306" width="30" height="7" rx="3.5" fill="#fff" opacity=".45"/>
+    <rect x="472" y="306" width="30" height="7" rx="3.5" fill="#fff" opacity=".45"/>
+    <rect x="646" y="310" width="40" height="15" rx="7.5" fill="#fff6cf"/>
+    <rect x="110" y="312" width="30" height="13" rx="6.5" fill="#e5484d"/>
+    <circle cx="214" cy="370" r="54" fill="#0b1017" opacity=".95"/>
+    <circle cx="592" cy="370" r="54" fill="#0b1017" opacity=".95"/>
+    <circle cx="214" cy="370" r="44" fill="#191d23" stroke="#3b434e" stroke-width="3"/>
+    <circle cx="592" cy="370" r="44" fill="#191d23" stroke="#3b434e" stroke-width="3"/>
+    <circle cx="214" cy="370" r="24" fill="#9aa4b0"/>
+    <circle cx="592" cy="370" r="24" fill="#9aa4b0"/>
+    <circle cx="214" cy="370" r="9" fill="#2b323b"/>
+    <circle cx="592" cy="370" r="9" fill="#2b323b"/>
+  </g>
+
+  <text x="46" y="472" fill="#fff" fill-opacity=".52" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="13">别克 · 舒适型</text>
+  <text x="754" y="472" fill="#fff" fill-opacity=".34" text-anchor="end" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="12">微租车 · 本地演示图</text>
+</svg>

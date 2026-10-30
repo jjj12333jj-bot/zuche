@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.vehicle.mapper.VehicleMapper">
+
+    <!-- 列表公共字段：车型/品牌/分类/变速箱/能源/状态均在此翻译，前端不再二次查字典 -->
+    <sql id="BaseColumns">
+        v.id,
+        v.vehicle_no,
+        v.model_id,
+        m.model_name,
+        v.brand_id,
+        b.brand_name,
+        m.category_code,
+        c.dict_label                AS category_name,
+        c.dict_value                AS category_color,
+        m.seats,
+        m.gearbox,
+        g.dict_label                AS gearbox_name,
+        m.fuel_type,
+        f.dict_label                AS fuel_type_name,
+        m.displacement,
+        v.daily_price,
+        v.deposit,
+        v.discount_rate,
+        ROUND(v.daily_price * v.discount_rate, 2) AS final_price,
+        COALESCE(
+            (SELECT vi.image_url FROM vehicle_image vi
+              WHERE vi.vehicle_id = v.id ORDER BY vi.sort_no, vi.id LIMIT 1),
+            m.cover_image
+        )                           AS cover_image,
+        v.store_id,
+        s.store_name,
+        v.status,
+        st.dict_label               AS status_name,
+        st.dict_value               AS status_color,
+        v.rent_count,
+        v.view_count,
+        v.description
+    </sql>
+
+    <sql id="BaseFrom">
+        FROM vehicle v
+        JOIN vehicle_model m   ON m.id = v.model_id AND m.deleted = 0
+        JOIN vehicle_brand b   ON b.id = v.brand_id AND b.deleted = 0
+        JOIN store s           ON s.id = v.store_id AND s.deleted = 0
+        LEFT JOIN sys_dict_data c  ON c.dict_type = 'vehicle_category' AND c.dict_code = m.category_code
+                                  AND c.deleted = 0 AND c.status = 1
+        LEFT JOIN sys_dict_data g  ON g.dict_type = 'gearbox' AND g.dict_code = m.gearbox
+                                  AND g.deleted = 0 AND g.status = 1
+        LEFT JOIN sys_dict_data f  ON f.dict_type = 'fuel_type' AND f.dict_code = m.fuel_type
+                                  AND f.deleted = 0 AND f.status = 1
+        LEFT JOIN sys_dict_data st ON st.dict_type = 'vehicle_status' AND st.dict_code = CAST(v.status AS CHAR)
+                                  AND st.deleted = 0 AND st.status = 1
+    </sql>
+
+    <select id="selectVehiclePage" resultType="com.zuche.module.vehicle.vo.VehicleListVO">
+        SELECT
+        <include refid="BaseColumns"/>
+        <include refid="BaseFrom"/>
+        WHERE v.deleted = 0
+          AND v.status != 0
+        <if test="q.onlyAvailable != null and q.onlyAvailable">
+            AND v.status = 1
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (
+                m.model_name LIKE CONCAT('%', #{q.keyword}, '%')
+                OR b.brand_name LIKE CONCAT('%', #{q.keyword}, '%')
+                OR v.license_plate LIKE CONCAT('%', #{q.keyword}, '%')
+                OR v.vehicle_no LIKE CONCAT('%', #{q.keyword}, '%')
+            )
+        </if>
+        <if test="q.categoryCode != null and q.categoryCode != ''">
+            AND m.category_code = #{q.categoryCode}
+        </if>
+        <if test="q.brandId != null">
+            AND v.brand_id = #{q.brandId}
+        </if>
+        <if test="q.storeId != null">
+            AND v.store_id = #{q.storeId}
+        </if>
+        <if test="q.minPrice != null">
+            AND ROUND(v.daily_price * v.discount_rate, 2) &gt;= #{q.minPrice}
+        </if>
+        <if test="q.maxPrice != null">
+            AND ROUND(v.daily_price * v.discount_rate, 2) &lt;= #{q.maxPrice}
+        </if>
+        <choose>
+            <when test="q.sortBy == 'priceAsc'">
+                ORDER BY final_price ASC, v.id DESC
+            </when>
+            <when test="q.sortBy == 'priceDesc'">
+                ORDER BY final_price DESC, v.id DESC
+            </when>
+            <when test="q.sortBy == 'newest'">
+                ORDER BY v.id DESC
+            </when>
+            <when test="q.sortBy == 'popular'">
+                ORDER BY v.rent_count DESC, v.id DESC
+            </when>
+            <otherwise>
+                ORDER BY v.rent_count DESC, v.view_count DESC, v.id DESC
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="selectVehicleDetail" resultType="com.zuche.module.vehicle.vo.VehicleDetailVO">
+        SELECT
+        <include refid="BaseColumns"/>,
+        v.license_plate,
+        v.vin,
+        v.color,
+        v.current_mileage,
+        v.register_date,
+        m.description AS model_description,
+        s.address     AS store_address,
+        s.phone       AS store_phone,
+        s.business_hours
+        <include refid="BaseFrom"/>
+        WHERE v.id = #{id}
+          AND v.deleted = 0
+          AND v.status != 0
+    </select>
+
+    <select id="selectImages" resultType="com.zuche.module.vehicle.vo.VehicleImageVO">
+        SELECT id, image_url, image_type, sort_no
+        FROM vehicle_image
+        WHERE vehicle_id = #{vehicleId}
+        ORDER BY sort_no, id
+    </select>
+
+    <select id="selectCategories" resultType="com.zuche.module.vehicle.vo.CategoryOptionVO">
+        SELECT dict_code  AS code,
+               dict_label AS label,
+               dict_value AS color
+        FROM sys_dict_data
+        WHERE dict_type = 'vehicle_category'
+          AND status = 1
+          AND deleted = 0
+        ORDER BY sort_no, id
+    </select>
+
+    <select id="selectBrands" resultType="com.zuche.module.vehicle.vo.BrandOptionVO">
+        SELECT id,
+               brand_name  AS name,
+               brand_logo  AS logo,
+               initial
+        FROM vehicle_brand
+        WHERE status = 1
+          AND deleted = 0
+        ORDER BY sort_no, id
+    </select>
+
+    <select id="selectStores" resultType="com.zuche.module.vehicle.vo.StoreOptionVO">
+        SELECT id,
+               store_name AS name,
+               address
+        FROM store
+        WHERE status = 1
+          AND deleted = 0
+        ORDER BY id
+    </select>
+
+    <select id="selectPriceRange" resultType="com.zuche.module.vehicle.vo.PriceRangeVO">
+        SELECT MIN(ROUND(daily_price * discount_rate, 2)) AS min_price,
+               MAX(ROUND(daily_price * discount_rate, 2)) AS max_price
+        FROM vehicle
+        WHERE deleted = 0
+          AND status != 0
+    </select>
+
+    <select id="selectRentVehicle" resultType="com.zuche.module.vehicle.vo.VehicleRentVO">
+        SELECT v.id,
+               CONCAT(b.brand_name, ' ', m.model_name) AS vehicle_name,
+               b.brand_name,
+               m.model_name,
+               v.license_plate,
+               v.daily_price,
+               v.deposit,
+               v.discount_rate,
+               v.status,
+               v.store_id,
+               s.store_name,
+               COALESCE(
+                   (SELECT vi.image_url FROM vehicle_image vi
+                     WHERE vi.vehicle_id = v.id ORDER BY vi.sort_no, vi.id LIMIT 1),
+                   m.cover_image
+               ) AS cover_image
+        FROM vehicle v
+        JOIN vehicle_model m ON m.id = v.model_id AND m.deleted = 0
+        JOIN vehicle_brand b ON b.id = v.brand_id AND b.deleted = 0
+        JOIN store s         ON s.id = v.store_id AND s.deleted = 0
+        WHERE v.id = #{id}
+          AND v.deleted = 0
+    </select>
+
+</mapper>

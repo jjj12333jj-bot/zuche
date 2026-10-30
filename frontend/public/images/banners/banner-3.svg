@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d4a45"/><stop offset="1" stop-color="#2f7d6b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#bg)"/>
+  <circle cx="1020" cy="60" r="220" fill="url(#glow)"/>
+  <circle cx="120" cy="380" r="150" fill="#fff" opacity=".04"/>
+  <g opacity=".08" stroke="#fff"><path d="M0 400 L1200 220"/><path d="M0 360 L1200 180"/></g>
+  <rect x="72" y="60" width="112" height="32" rx="16" fill="#fff" fill-opacity=".16"/>
+  <text x="128" y="82" text-anchor="middle" fill="#fff" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="14">新能源</text>
+  <text x="72" y="168" fill="#fff" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="52" font-weight="700">新能源专区 低至 219/天</text>
+  <text x="72" y="218" fill="#fff" fill-opacity=".72" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="18">纯电与混动车型集中展示，支持异地还车</text>
+  <rect x="72" y="258" width="150" height="44" rx="22" fill="#fff"/>
+  <text x="147" y="286" text-anchor="middle" fill="#1d4a45" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="15" font-weight="600">立即查看</text>
+  <g transform="translate(650,30) scale(0.66)">
+  <g>
+    <ellipse cx="400" cy="414" rx="292" ry="22" fill="#000" opacity=".22"/>
+    <path d="M268 288 L326 214 Q341 196 366 196 H506 Q532 196 548 216 L600 288 Z" fill="#e8edf3" stroke="#000" stroke-opacity=".12" stroke-width="2"/>
+    <path d="M292 276 L336 210 Q346 200 362 200 H424 V276 Z" fill="#1a2a3a"/>
+    <path d="M448 208 H504 Q522 208 534 224 L562 276 H448 Z" fill="#1a2a3a"/>
+    <rect x="426" y="198" width="12" height="82" fill="#e8edf3" opacity=".9"/>
+    <path d="M104 342 Q104 304 144 296 L206 286 H596 Q652 292 678 304 Q700 312 700 340 V354 Q700 372 678 372 H126 Q104 372 104 354 Z"
+          fill="#e8edf3" stroke="#000" stroke-opacity=".14" stroke-width="2"/>
+    <path d="M120 330 L680 330" stroke="#fff" stroke-opacity=".22" stroke-width="3"/>
+    <path d="M430 292 V362" stroke="#000" stroke-opacity=".18" stroke-width="2"/>
+    <path d="M510 292 V362" stroke="#000" stroke-opacity=".14" stroke-width="2"/>
+    <rect x="392" y="306" width="30" height="7" rx="3.5" fill="#fff" opacity=".45"/>
+    <rect x="472" y="306" width="30" height="7" rx="3.5" fill="#fff" opacity=".45"/>
+    <rect x="646" y="310" width="40" height="15" rx="7.5" fill="#fff6cf"/>
+    <rect x="110" y="312" width="30" height="13" rx="6.5" fill="#e5484d"/>
+    <circle cx="214" cy="370" r="54" fill="#0b1017" opacity=".95"/>
+    <circle cx="592" cy="370" r="54" fill="#0b1017" opacity=".95"/>
+    <circle cx="214" cy="370" r="44" fill="#191d23" stroke="#3b434e" stroke-width="3"/>
+    <circle cx="592" cy="370" r="44" fill="#191d23" stroke="#3b434e" stroke-width="3"/>
+    <circle cx="214" cy="370" r="24" fill="#9aa4b0"/>
+    <circle cx="592" cy="370" r="24" fill="#9aa4b0"/>
+    <circle cx="214" cy="370" r="9" fill="#2b323b"/>
+    <circle cx="592" cy="370" r="9" fill="#2b323b"/>
+  </g></g>
+  <text x="1128" y="368" text-anchor="end" fill="#fff" fill-opacity=".4" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="13">微租车 · 本地演示图</text>
+</svg>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.user.mapper.SysUserMapper">
+
+    <!--
+      后台「用户信用」列表：
+        - 等级名称/颜色左连 credit_rule，避免前端硬编码四档中文
+        - risk_type 取当前生效的最高强度（BLACKLIST > OVERRIDE > WARNING）
+        - 完成/取消单数用于辅助判断，不是主口径（主口径永远看 credit_log）
+    -->
+    <select id="selectAdminUserPage" resultType="com.zuche.module.risk.vo.AdminUserCreditVO">
+        SELECT
+            u.id,
+            u.username,
+            u.real_name,
+            u.phone,
+            u.credit_score,
+            u.credit_level,
+            r.rule_name          AS level_label,
+            r.color              AS level_color,
+            (SELECT b.list_type
+               FROM credit_blacklist b
+              WHERE b.user_id = u.id
+                AND b.status = 'ACTIVE'
+                AND b.deleted = 0
+                AND (b.expire_time IS NULL OR b.expire_time > NOW())
+              ORDER BY FIELD(b.list_type, 'BLACKLIST', 'OVERRIDE', 'WARNING')
+              LIMIT 1)           AS risk_type,
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.user_id = u.id AND o.deleted = 0 AND o.status = 'COMPLETED') AS finished_count,
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.user_id = u.id AND o.deleted = 0
+                AND o.status = 'CANCELLED' AND o.pay_time IS NOT NULL)             AS cancel_count,
+            u.create_time
+        FROM sys_user u
+        LEFT JOIN credit_rule r
+               ON r.rule_type = 'LEVEL'
+              AND r.rule_code = u.credit_level
+              AND r.deleted = 0
+        WHERE u.deleted = 0
+          AND EXISTS (SELECT 1 FROM sys_user_role ur
+                        JOIN sys_role ro ON ro.id = ur.role_id
+                       WHERE ur.user_id = u.id AND ro.role_code = 'USER')
+        <if test="keyword != null and keyword != ''">
+            AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.phone LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="level != null and level != ''">
+            AND u.credit_level = #{level}
+        </if>
+        <if test="riskType != null and riskType != ''">
+            <choose>
+                <when test="riskType == 'NONE'">
+                    AND NOT EXISTS (SELECT 1 FROM credit_blacklist b
+                                     WHERE b.user_id = u.id
+                                       AND b.status = 'ACTIVE'
+                                       AND b.deleted = 0
+                                       AND (b.expire_time IS NULL OR b.expire_time > NOW()))
+                </when>
+                <otherwise>
+                    AND EXISTS (SELECT 1 FROM credit_blacklist b
+                                 WHERE b.user_id = u.id
+                                   AND b.list_type = #{riskType}
+                                   AND b.status = 'ACTIVE'
+                                   AND b.deleted = 0
+                                   AND (b.expire_time IS NULL OR b.expire_time > NOW()))
+                </otherwise>
+            </choose>
+        </if>
+        ORDER BY u.credit_score ASC, u.id ASC
+    </select>
+
+</mapper>

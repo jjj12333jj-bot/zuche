@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <rect width="800" height="500" fill="#eef2f6"/>
+  <g stroke="#c3ccd6" stroke-width="6" fill="none" stroke-linecap="round">
+    <rect x="290" y="180" width="220" height="150" rx="12"/>
+    <circle cx="350" cy="235" r="18"/>
+    <path d="M300 315 L370 250 L420 295 L450 270 L500 315"/>
+  </g>
+  <text x="400" y="382" text-anchor="middle" fill="#8b98a8" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="18">图片加载失败</text>
+  <text x="400" y="410" text-anchor="middle" fill="#a9b4c0" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="13">请检查 /public/images 下的本地静态资源</text>
+</svg>

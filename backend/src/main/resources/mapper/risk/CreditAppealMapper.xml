@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.risk.mapper.CreditAppealMapper">
+
+    <!--
+      申诉列表：一次把「谁申诉的 / 针对哪条扣分 / 扣分事件叫什么 / 关联哪笔订单 / 谁处理的」全部带出来，
+      审核人不需要再点开三个页面拼证据链。
+    -->
+    <select id="selectAppealPage" resultType="com.zuche.module.risk.vo.CreditAppealVO">
+        SELECT
+            a.id,
+            a.appeal_no,
+            a.user_id,
+            u.username,
+            u.real_name,
+            u.credit_score,
+            u.credit_level,
+            a.credit_log_id,
+            l.action_code,
+            cr.rule_name        AS action_name,
+            l.score_change      AS log_score_change,
+            l.reason            AS log_reason,
+            l.create_time       AS log_time,
+            a.order_id,
+            o.order_no,
+            a.appeal_reason,
+            a.status,
+            a.handle_user_id,
+            hu.real_name        AS handle_user_name,
+            a.handle_time,
+            a.handle_remark,
+            a.restore_score,
+            a.create_time
+        FROM credit_appeal a
+        LEFT JOIN sys_user   u  ON u.id = a.user_id
+        LEFT JOIN credit_log l  ON l.id = a.credit_log_id
+        LEFT JOIN credit_rule cr ON cr.rule_type = 'ACTION' AND cr.rule_code = l.action_code AND cr.deleted = 0
+        LEFT JOIN lease_order o ON o.id = a.order_id
+        LEFT JOIN sys_user   hu ON hu.id = a.handle_user_id
+        WHERE a.deleted = 0
+        <if test="userId != null">
+            AND a.user_id = #{userId}
+        </if>
+        <if test="status != null and status != ''">
+            AND a.status = #{status}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (a.appeal_no LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                 OR u.real_name LIKE CONCAT('%', #{keyword}, '%')
+                 OR o.order_no LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY a.id DESC
+    </select>
+
+    <select id="selectAppealVO" resultType="com.zuche.module.risk.vo.CreditAppealVO">
+        SELECT
+            a.id,
+            a.appeal_no,
+            a.user_id,
+            u.username,
+            u.real_name,
+            u.credit_score,
+            u.credit_level,
+            a.credit_log_id,
+            l.action_code,
+            cr.rule_name        AS action_name,
+            l.score_change      AS log_score_change,
+            l.reason            AS log_reason,
+            l.create_time       AS log_time,
+            a.order_id,
+            o.order_no,
+            a.appeal_reason,
+            a.status,
+            a.handle_user_id,
+            hu.real_name        AS handle_user_name,
+            a.handle_time,
+            a.handle_remark,
+            a.restore_score,
+            a.create_time
+        FROM credit_appeal a
+        LEFT JOIN sys_user   u  ON u.id = a.user_id
+        LEFT JOIN credit_log l  ON l.id = a.credit_log_id
+        LEFT JOIN credit_rule cr ON cr.rule_type = 'ACTION' AND cr.rule_code = l.action_code AND cr.deleted = 0
+        LEFT JOIN lease_order o ON o.id = a.order_id
+        LEFT JOIN sys_user   hu ON hu.id = a.handle_user_id
+        WHERE a.id = #{id}
+    </select>
+
+</mapper>

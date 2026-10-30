@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#232f3d"/><stop offset="1" stop-color="#3f5367"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d7dce2"/><stop offset="1" stop-color="#9aa4b0"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <ellipse cx="400" cy="424" rx="250" ry="20" fill="#000" opacity=".3"/>
+  <path d="M200 300 L230 220 Q240 196 268 194 H532 Q560 196 570 220 L600 300 V370 Q600 392 578 392 H222 Q200 392 200 370 Z" fill="url(#body)"/>
+  <path d="M252 226 H548 Q562 226 566 240 L578 286 H222 L234 240 Q238 226 252 226 Z" fill="#16222e"/>
+  <rect x="206" y="300" width="60" height="26" rx="8" fill="#e5484d"/>
+  <rect x="534" y="300" width="60" height="26" rx="8" fill="#e5484d"/>
+  <rect x="330" y="338" width="140" height="36" rx="6" fill="#1c2735"/>
+  <text x="400" y="363" text-anchor="middle" fill="#dfe7ef" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="18" letter-spacing="2">京A·8888</text>
+  <path d="M200 372 H600" stroke="#000" stroke-opacity=".18" stroke-width="2"/>
+  <circle cx="270" cy="392" r="34" fill="#111820"/>
+  <circle cx="530" cy="392" r="34" fill="#111820"/>
+  <text x="400" y="470" text-anchor="middle" fill="#fff" fill-opacity=".34" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="13">车辆尾部 · 本地演示图</text>
+</svg>

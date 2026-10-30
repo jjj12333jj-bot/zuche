@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.credit.mapper.CreditLogMapper">
+
+    <!--
+      信用明细：事件名取自 credit_rule（后台改了叫法，历史明细的展示也跟着统一），
+      订单号左连 lease_order，人工调整类事件没有订单，order_no 为 null。
+    -->
+    <select id="selectLogPage" resultType="com.zuche.module.credit.vo.CreditLogVO">
+        SELECT
+            l.id,
+            l.action_code,
+            r.rule_name        AS action_name,
+            l.change_type,
+            l.score_before,
+            l.score_change,
+            l.score_after,
+            l.order_id,
+            o.order_no,
+            l.reason,
+            l.create_time
+        FROM credit_log l
+        LEFT JOIN credit_rule r
+               ON r.rule_type = 'ACTION'
+              AND r.rule_code = l.action_code
+              AND r.deleted = 0
+        LEFT JOIN lease_order o
+               ON o.id = l.order_id
+        WHERE l.user_id = #{userId}
+        <if test="changeType != null and changeType != ''">
+            AND l.change_type = #{changeType}
+        </if>
+        ORDER BY l.id DESC
+    </select>
+
+</mapper>

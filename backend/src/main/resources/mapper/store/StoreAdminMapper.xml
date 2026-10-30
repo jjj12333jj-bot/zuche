@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zuche.module.store.mapper.StoreAdminMapper">
+
+    <!--
+      网点概览：一个网点一行，其余指标全部用标量子查询取。
+
+      为什么不用一堆 JOIN + GROUP BY：
+        同一个网点要同时按「车辆状态」「订单状态」「今日」「本月」四种维度切片，
+        一次 JOIN 会把不同维度的行乘在一起，数字会翻倍。标量子查询各算各的，互不干扰。
+      数据量在千级以内，这种方式比写五个接口更省往返。
+    -->
+    <select id="selectOverview" resultType="com.zuche.module.store.vo.StoreOverviewVO">
+        SELECT
+            s.id                                    AS store_id,
+            s.store_name                            AS store_name,
+            s.address                               AS address,
+            s.phone                                 AS phone,
+            s.business_hours                        AS business_hours,
+
+            /* ---------- 车辆资产 ---------- */
+            (SELECT COUNT(*) FROM vehicle v
+              WHERE v.store_id = s.id AND v.deleted = 0)                                AS vehicle_total,
+            (SELECT COUNT(*) FROM vehicle v
+              WHERE v.store_id = s.id AND v.deleted = 0 AND v.status = 1)               AS vehicle_available,
+            (SELECT COUNT(*) FROM vehicle v
+              WHERE v.store_id = s.id AND v.deleted = 0 AND v.status = 2)               AS vehicle_rented,
+            (SELECT COUNT(*) FROM vehicle v
+              WHERE v.store_id = s.id AND v.deleted = 0 AND v.status = 3)               AS vehicle_maintenance,
+
+            /* ---------- 订单存量（当前状态，与时间无关） ---------- */
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.store_id = s.id AND o.deleted = 0 AND o.status = 'WAIT_PICKUP')   AS pending_pickup,
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.store_id = s.id AND o.deleted = 0 AND o.status = 'IN_USE')        AS in_use,
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.store_id = s.id AND o.deleted = 0 AND o.status = 'WAIT_RETURN')   AS pending_return,
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.store_id = s.id AND o.deleted = 0 AND o.status = 'OVERDUE')       AS overdue,
+
+            /* ---------- 今日 ---------- */
+            /* 用半开区间而不是 DATE(create_time) = CURDATE()，后者会让索引用不上 */
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.store_id = s.id AND o.deleted = 0
+                AND o.create_time >= CURDATE()
+                AND o.create_time &lt; CURDATE() + INTERVAL 1 DAY)                      AS today_new_orders,
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.store_id = s.id AND o.deleted = 0 AND o.status = 'COMPLETED'
+                AND o.finish_time >= CURDATE()
+                AND o.finish_time &lt; CURDATE() + INTERVAL 1 DAY)                      AS today_completed,
+
+            /* ---------- 本月 ---------- */
+            (SELECT COUNT(*) FROM lease_order o
+              WHERE o.store_id = s.id AND o.deleted = 0
+                AND o.create_time >= DATE_FORMAT(CURDATE(), '%Y-%m-01'))               AS month_orders,
+
+            /* 只算租金实收：押金是代收代退，不计入营收 */
+            (SELECT COALESCE(SUM(p.amount), 0) FROM payment_record p
+               JOIN lease_order o ON o.id = p.order_id AND o.deleted = 0
+              WHERE o.store_id = s.id
+                AND p.status = 'SUCCESS' AND p.pay_type = 'RENT'
+                AND p.pay_time >= DATE_FORMAT(CURDATE(), '%Y-%m-01'))                  AS month_revenue,
+
+            /* 在管押金：只有还没结束的订单，押金才算"在手上" */
+            (SELECT COALESCE(SUM(p.amount), 0) FROM payment_record p
+               JOIN lease_order o ON o.id = p.order_id AND o.deleted = 0
+              WHERE o.store_id = s.id
+                AND p.status = 'SUCCESS' AND p.pay_type = 'DEPOSIT'
+                AND o.status IN ('WAIT_PICKUP', 'IN_USE', 'WAIT_RETURN', 'OVERDUE'))   AS deposit_in_hand
+        FROM store s
+        WHERE s.id = #{storeId} AND s.deleted = 0
+    </select>
+
+</mapper>

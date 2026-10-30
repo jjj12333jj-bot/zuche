@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2c3d"/><stop offset="1" stop-color="#3b5670"/>
+    </linearGradient>
+    <linearGradient id="dash" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#222d3a"/><stop offset="1" stop-color="#111820"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="#0b1118"/>
+  <path d="M0 0 H800 V210 H0 Z" fill="url(#sky)"/>
+  <path d="M0 210 H800 L760 400 H40 Z" fill="url(#dash)"/>
+  <path d="M0 210 H800 L780 250 H20 Z" fill="#0d151d" opacity=".8"/>
+  <circle cx="252" cy="338" r="112" fill="none" stroke="#2c3746" stroke-width="26"/>
+  <circle cx="252" cy="338" r="58" fill="#1a2431" stroke="#3a4758" stroke-width="4"/>
+  <circle cx="252" cy="338" r="16" fill="#4a5a6d"/>
+  <path d="M252 282 V338 M196 338 H308" stroke="#3a4758" stroke-width="14" stroke-linecap="round"/>
+  <rect x="412" y="250" width="244" height="132" rx="14" fill="#0a1119" stroke="#3a4a5d" stroke-width="3"/>
+  <rect x="424" y="262" width="220" height="26" rx="6" fill="#14212e"/>
+  <text x="440" y="281" fill="#7fb2d8" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="14">微租车 · 智能座舱</text>
+  <text x="440" y="330" fill="#e8eef5" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="26" font-weight="700">信用风控</text>
+  <text x="440" y="360" fill="#8fa3b8" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="14">动态押金 · 押金低至 8 折</text>
+  <rect x="640" y="250" width="80" height="132" rx="10" fill="#141d27" stroke="#2f3c4c"/>
+  <circle cx="680" cy="290" r="20" fill="none" stroke="#4b6076" stroke-width="3"/>
+  <path d="M680 290 L680 274" stroke="#7fb2d8" stroke-width="3"/>
+  <rect x="660" y="330" width="40" height="8" rx="4" fill="#2b3a4a"/>
+  <rect x="660" y="348" width="40" height="8" rx="4" fill="#2b3a4a"/>
+  <text x="400" y="470" fill="#fff" fill-opacity=".35" text-anchor="middle" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="13">内饰示意 · 本地演示图</text>
+</svg>
