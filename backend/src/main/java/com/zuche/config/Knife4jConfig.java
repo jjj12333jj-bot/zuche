@@ -29,10 +29,8 @@ public class Knife4jConfig {
                         .description("""
                                 基于信用风控的微租车平台后端接口。
 
-                                核心链路：车辆浏览 → 下单（按信用等级计算动态押金）→ 模拟支付 →
+                                核心链路：车辆浏览 → 下单（按信用等级计算动态押金）→ 在线支付 →
                                 取车 → 归还 → 押金退还 → 订单完成 → 信用分自动更新。
-
-                                说明：支付、短信、地图均为模拟实现，不接入任何真实第三方服务。
                                 """)
                         .contact(new Contact().name("zuche")))
                 .components(new Components()

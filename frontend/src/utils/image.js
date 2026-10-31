@@ -1,5 +1,5 @@
 /**
- * 图片地址处理：全部演示图均放在 public/images 下，离线可用。
+ * 图片地址处理：车辆与轮播图统一放在 public/images 下，离线可用。
  * 任一图片 404 时回落到本地占位图，避免答辩现场出现破图。
  */
 export const FALLBACK_IMAGE = '/images/placeholder.svg'

@@ -16,7 +16,7 @@
           <li><b>4 档</b> 优秀 / 良好 / 一般 / 待观察</li>
           <li><b>可追溯</b> 每笔信用变动都有日志与申诉入口</li>
         </ul>
-        <div class="brand-foot">毕业设计演示项目 · 支付与地图均为模拟实现</div>
+        <div class="brand-foot">泉州南安店 · 泉州晋江店　全流程线上办理</div>
       </aside>
 
       <section class="form-side">
@@ -89,7 +89,7 @@
 
           <el-form-item prop="agree">
             <el-checkbox v-model="form.agree">
-              我已阅读并同意《租赁服务协议》与《信用风控规则说明》（演示）
+              我已阅读并同意《租赁服务协议》与《信用风控规则说明》
             </el-checkbox>
           </el-form-item>
 

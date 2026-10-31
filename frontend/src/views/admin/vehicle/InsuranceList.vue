@@ -145,7 +145,7 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="保险公司" prop="insurer">
-          <el-input v-model="form.insurer" maxlength="50" placeholder="人保财险(模拟)" />
+          <el-input v-model="form.insurer" maxlength="50" placeholder="人保财险" />
         </el-form-item>
         <el-form-item label="保单号" prop="policyNo">
           <el-input v-model="form.policyNo" maxlength="50" placeholder="PICC-C-000001" />
@@ -315,7 +315,7 @@ async function openCreate() {
     id: null,
     vehicleId: null,
     insuranceType: 'COMPULSORY',
-    insurer: '人保财险(模拟)',
+    insurer: '人保财险',
     policyNo: '',
     startDate: new Date().toISOString().slice(0, 10),
     endDate: '',

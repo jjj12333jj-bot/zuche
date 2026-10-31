@@ -8,13 +8,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 模拟支付结果
+ * 支付结果
  *
  * <p>返回 payments 数组，前端可直接把两条流水（租金 / 押金）展示出来，
  * 说明"押金不是收入、是代收待退"，这是答辩时容易被追问的点。</p>
  */
 @Data
-@Schema(description = "模拟支付结果")
+@Schema(description = "支付结果")
 public class OrderPayVO {
 
     private Long orderId;

@@ -155,7 +155,7 @@
               </el-table-column>
               <el-table-column label="渠道" width="130">
                 <template #default="{ row }">
-                  {{ row.payMethod === 'MOCK_ALIPAY' ? '模拟支付宝' : '模拟微信支付' }}
+                  {{ row.payMethod === 'MOCK_ALIPAY' ? '支付宝' : '微信支付' }}
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="90" align="center">
@@ -179,7 +179,7 @@
           <div v-if="detail.refunds && detail.refunds.length > 0" class="card">
             <h3 class="card-title">
               退款流水
-              <span class="title-note">模拟退款，提交后即时到账</span>
+              <span class="title-note">押金于还车结算后原路退回</span>
             </h3>
             <el-table :data="detail.refunds" size="small" border>
               <el-table-column prop="refundNo" label="退款单号" min-width="200" />

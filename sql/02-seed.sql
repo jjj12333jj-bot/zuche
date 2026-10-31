@@ -8,7 +8,7 @@
 --            评价、收藏、地址、公告、轮播、调车、申诉、风控名单、操作日志
 --
 --  初始账号（密码均为 123456）:
---    admin 系统管理员 | store1 网点管理员(中关村) | store2 网点管理员(望京)
+--    admin 系统管理员 | store1 网点管理员(泉州南安店) | store2 网点管理员(泉州晋江店)
 --    user1 128优秀 | user2 112良好 | user3 92一般 | user4 74待观察 | user5 100新用户 | user6 138优秀
 -- =====================================================================
 
@@ -70,8 +70,8 @@ SELECT
     CONCAT('V', LPAD(m.id, 4, '0')),
     m.id,
     m.brand_id,
-    1 + (m.id % 4),
-    CONCAT('京', CHAR(65 + (m.id % 6)), '·', LPAD((m.id * 137) % 10000, 4, '0')),
+    1 + (m.id % 2),
+    CONCAT('闽C·', LPAD((m.id * 137) % 10000, 4, '0')),
     CONCAT('LSVZUCHE', LPAD(m.id, 9, '0')),
     ELT(1 + (m.id % 5), '珍珠白', '曜石黑', '星空蓝', '钛银灰', '云杉绿'),
     ROUND(1 + (m.id % 7) * 0.8, 1),
@@ -131,13 +131,13 @@ INSERT INTO vehicle_maintenance (vehicle_id, maint_type, maint_date, mileage, co
 
 -- 违章记录
 INSERT INTO vehicle_violation (vehicle_id, order_id, user_id, violation_time, violation_place, violation_type, fine_amount, points, handle_status, handle_time, remark) VALUES
-(3,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 40 DAY), '北京市海淀区中关村大街',  '机动车违反禁令标志', 200.00, 3, 'UNHANDLED', NULL, '待责任人处理'),
-(9,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 33 DAY), '北京市朝阳区建国路',      '超速 20% 以下',      100.00, 3, 'HANDLED',   DATE_SUB(NOW(), INTERVAL 20 DAY), '已由承租人缴纳'),
-(12, NULL, NULL, DATE_SUB(NOW(), INTERVAL 28 DAY), '北京市大兴区荣华南路',    '违法停车',           200.00, 0, 'HANDLED',   DATE_SUB(NOW(), INTERVAL 15 DAY), '已处理'),
-(17, NULL, NULL, DATE_SUB(NOW(), INTERVAL 18 DAY), '北京市朝阳区望京街',      '未按导向车道行驶',   100.00, 2, 'UNHANDLED', NULL, '待核实'),
-(21, NULL, NULL, DATE_SUB(NOW(), INTERVAL 12 DAY), '北京市东城区建国门内大街', '闯红灯',             200.00, 6, 'APPEALING', NULL, '承租人申诉中'),
-(5,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 8 DAY),  '北京市海淀区学院路',      '违法停车',           200.00, 0, 'UNHANDLED', NULL, NULL),
-(23, NULL, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY),  '北京市朝阳区东三环',      '占用应急车道',       200.00, 6, 'UNHANDLED', NULL, NULL);
+(3,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 40 DAY), '泉州市南安市成功街',  '机动车违反禁令标志', 200.00, 3, 'UNHANDLED', NULL, '待责任人处理'),
+(9,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 33 DAY), '泉州市晋江市世纪大道',      '超速 20% 以下',      100.00, 3, 'HANDLED',   DATE_SUB(NOW(), INTERVAL 20 DAY), '已由承租人缴纳'),
+(12, NULL, NULL, DATE_SUB(NOW(), INTERVAL 28 DAY), '泉州市南安市江北大道',    '违法停车',           200.00, 0, 'HANDLED',   DATE_SUB(NOW(), INTERVAL 15 DAY), '已处理'),
+(17, NULL, NULL, DATE_SUB(NOW(), INTERVAL 18 DAY), '泉州市晋江市阳光路',      '未按导向车道行驶',   100.00, 2, 'UNHANDLED', NULL, '待核实'),
+(21, NULL, NULL, DATE_SUB(NOW(), INTERVAL 12 DAY), '泉州市丰泽区田安路', '闯红灯',             200.00, 6, 'APPEALING', NULL, '承租人申诉中'),
+(5,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 8 DAY),  '泉州市南安市新华街',      '违法停车',           200.00, 0, 'UNHANDLED', NULL, NULL),
+(23, NULL, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY),  '泉州市晋江市和平路',      '占用应急车道',       200.00, 6, 'UNHANDLED', NULL, NULL);
 
 -- ---------------------------------------------------------------------
 -- 4. 普通用户（含信用校准，走 credit_log 留痕）
@@ -176,21 +176,21 @@ UPDATE sys_user
 -- 5. 地址 / 收藏 / 公告 / 轮播 / 调车申请
 -- ---------------------------------------------------------------------
 INSERT INTO user_address (user_id, receiver, phone, province, city, district, detail, is_default) VALUES
-(4, '张伟', '13900000001', '北京市', '北京市', '海淀区', '中关村大街 27 号 3 号楼 502', 1),
-(4, '张伟', '13900000001', '北京市', '北京市', '朝阳区', '望京西路 12 号院 8 号楼 1102', 0),
-(5, '李娜', '13900000002', '北京市', '北京市', '西城区', '金融街 33 号 A 座 1801', 1),
-(6, '王强', '13900000003', '北京市', '北京市', '丰台区', '南三环西路 16 号院 5 号楼 903', 1);
+(4, '张伟', '13900000001', '福建省', '泉州市', '南安市', '成功街 66 号 3 号楼 502', 1),
+(4, '张伟', '13900000001', '福建省', '泉州市', '晋江市', '青阳街道阳光路 12 号院 8 号楼 1102', 0),
+(5, '李娜', '13900000002', '福建省', '泉州市', '丰泽区', '东海大街 33 号 A 座 1801', 1),
+(6, '王强', '13900000003', '福建省', '泉州市', '鲤城区', '江南大街 16 号院 5 号楼 903', 1);
 
 INSERT INTO favorite (user_id, vehicle_id) VALUES (4, 9), (4, 17), (5, 13), (5, 19), (8, 4), (9, 21);
 
 INSERT INTO announcement (title, content, type, publisher_id, status, view_count, publish_time) VALUES
 ('信用分上线：押金最低 8 折', '平台已上线信用风控体系。信用分达到 120 分（优秀档）即可享受押金 8 折，良好档 9 折，待观察档押金上浮 20%。信用分由按时归还率、取消率、逾期次数与完成订单数共同决定，每笔变动都可在"我的-信用中心"查看明细，对扣分有异议可在线申诉。', 'RULE', 1, 1, 328, DATE_SUB(NOW(), INTERVAL 12 DAY)),
-('新网点开业：亦庄经开区店', '亦庄经开区店正式营业，取还车时间 08:00-19:00，支持跨网点还车。开业首月经济型车型日租金 8 折。', 'ACTIVITY', 1, 1, 156, DATE_SUB(NOW(), INTERVAL 6 DAY)),
+('新网点开业：泉州晋江店', '泉州晋江店正式营业，取还车时间 08:00-20:00，支持跨网点还车。开业首月经济型车型日租金 8 折。', 'ACTIVITY', 1, 1, 156, DATE_SUB(NOW(), INTERVAL 6 DAY)),
 ('假期取车提醒', '假期期间取车请提前 30 分钟到店，携带身份证与驾驶证原件。逾期归还将按日租金 1.5 倍收取违约金，并影响信用分。', 'NOTICE', 1, 1, 512, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-('押金退还时效说明', '网点确认归还后系统自动发起押金退还，当前为模拟支付通道，1 个工作日内完成。可在订单详情-退款记录中查看流水状态。', 'NOTICE', 1, 1, 87, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+('押金退还时效说明', '网点确认归还后系统自动发起押金退还，走线上支付通道，1 个工作日内完成。可在订单详情-退款记录中查看流水状态。', 'NOTICE', 1, 1, 87, DATE_SUB(NOW(), INTERVAL 1 DAY)),
 ('邀请好友得 50 元租车券', '活动期间邀请好友注册并完成首单，双方各得 50 元租车券，券可叠加使用，有效期 90 天。同一设备、同一手机号视为同一用户。', 'ACTIVITY', 1, 1, 64, DATE_SUB(NOW(), INTERVAL 2 HOUR)),
 -- 下面两条是草稿：后台列表要能演示「草稿 / 已发布」两态，草稿不进前台公告栏，publish_time 为空
-('2026 年春节网点营业时间安排', '春节期间（除夕至初六）各网点营业时间调整为 09:00-17:00，首都机场店、大兴机场店 24 小时值守。跨网点还车请提前在订单中备注。', 'NOTICE', 1, 0, 0, NULL),
+('2026 年春节网点营业时间安排', '春节期间（除夕至初六）各网点营业时间调整为 09:00-17:00，泉州南安店、泉州晋江店均正常营业。跨网点还车请提前在订单中备注。', 'NOTICE', 1, 0, 0, NULL),
 ('新能源车型里程限制调整说明', '自下月起，新能源车型单日里程上限由 300 公里调整为 350 公里，超出部分按 0.8 元/公里计费。本条公告待运营确认后发布。', 'RULE', 1, 0, 0, NULL);
 
 INSERT INTO banner (title, image_url, link_url, position, sort_no, status) VALUES
@@ -199,8 +199,8 @@ INSERT INTO banner (title, image_url, link_url, position, sort_no, status) VALUE
 ('新能源专区 低至 219/天',  '/images/banners/banner-3.svg', '/vehicles?category=EV', 'HOME', 3, 1);
 
 INSERT INTO dispatch_apply (apply_no, vehicle_id, from_store_id, to_store_id, apply_user_id, reason, status, audit_user_id, audit_time, audit_remark, create_time) VALUES
-('D202610260001', 22, 3, 1, 3, '国贸店奥迪Q5L库存富余，中关村店豪华型已租罄', 'PENDING', NULL, NULL, NULL, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-('D202610150001', 21, 2, 4, 3, '亦庄店商务接待需求上升', 'APPROVED', 1, DATE_SUB(NOW(), INTERVAL 6 DAY), '同意调拨，注意里程登记', DATE_SUB(NOW(), INTERVAL 7 DAY));
+('D202610260001', 22, 1, 2, 2, '南安店奥迪Q5L库存富余，晋江店豪华型已租罄', 'PENDING', NULL, NULL, NULL, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+('D202610150001', 21, 1, 2, 2, '晋江店商务接待需求上升，由南安店调入', 'APPROVED', 1, DATE_SUB(NOW(), INTERVAL 6 DAY), '同意调拨，注意里程登记', DATE_SUB(NOW(), INTERVAL 7 DAY));
 
 -- ---------------------------------------------------------------------
 -- 6. 历史订单（300 条；按「车辆档期」排程生成）
@@ -617,7 +617,8 @@ UPDATE order_evaluation e
 
 -- ---------------------------------------------------------------------
 -- 8. 信用申诉 / 风控名单
--- ---------------------------------------------------------------------INSERT INTO credit_appeal (appeal_no, user_id, credit_log_id, order_id, appeal_reason, status, handle_user_id, handle_time, handle_remark, restore_score, create_time) VALUES
+-- ---------------------------------------------------------------------
+INSERT INTO credit_appeal (appeal_no, user_id, credit_log_id, order_id, appeal_reason, status, handle_user_id, handle_time, handle_remark, restore_score, create_time) VALUES
 ('A202610200001', 7, NULL, NULL, '逾期是因为车辆故障无法启动，已联系网点救援，不应计入逾期。', 'PENDING',  NULL, NULL, NULL, 0, DATE_SUB(NOW(), INTERVAL 3 DAY)),
 ('A202610180001', 6, NULL, NULL, '取车迟到 20 分钟，原因是地铁延误，希望酌情减免扣分。', 'REJECTED', 1, DATE_SUB(NOW(), INTERVAL 5 DAY), '取车时间已在订单中明确，维持原判', 0, DATE_SUB(NOW(), INTERVAL 7 DAY)),
 ('A202610120001', 4, NULL, NULL, '订单取消是网点无车导致，非本人原因。', 'APPROVED', 1, DATE_SUB(NOW(), INTERVAL 14 DAY), '经核实网点库存异常，恢复扣分 3 分', 3, DATE_SUB(NOW(), INTERVAL 16 DAY));
@@ -751,3 +752,17 @@ SELECT
           / ((SELECT COUNT(*) FROM vehicle WHERE deleted = 0 AND status IN (1, 2)) * 45), 1) AS 近45天车日利用率
 FROM lease_order o
 WHERE o.deleted = 0 AND o.status <> 'CANCELLED';
+
+-- ---------------------------------------------------------------------
+-- 12. 异地还车样本
+--     种子订单默认回到取车网点，页面上就看不到"异地还车"的样本；
+--     这里把约 2/3 的已完成订单改为在另一家网点归还（3 - store_id 即另一家）。
+-- ---------------------------------------------------------------------
+UPDATE lease_order
+   SET return_store_id = 3 - store_id
+ WHERE status = 'COMPLETED'
+   AND store_id IN (1, 2)
+   AND id % 3 <> 0;
+
+SELECT '异地还车订单数' AS 指标, COUNT(*) AS 值
+FROM lease_order WHERE store_id <> return_store_id;

@@ -161,7 +161,7 @@
             :rows="3"
             maxlength="200"
             show-word-limit
-            placeholder="例如：望京店周末订单积压，需临时补充运力"
+            placeholder="例如：晋江店周末订单积压，需临时补充运力"
           />
         </el-form-item>
       </el-form>

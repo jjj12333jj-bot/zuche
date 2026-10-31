@@ -87,7 +87,7 @@
           <el-button type="primary" size="large" class="rent-btn" @click="onRent">
             立即租赁
           </el-button>
-          <p class="rent-note">支付、短信、地图均为模拟实现，不接入真实第三方渠道</p>
+          <p class="rent-note">押金按信用等级折扣收取，还车结算后原路退回</p>
 
           <div class="meta-list">
             <div class="meta-item">
@@ -139,9 +139,9 @@
           </el-descriptions>
           <el-alert
             class="map-note"
-            type="warning"
+            type="info"
             :closable="false"
-            title="地图能力为模拟：仅展示网点文本地址，不做真实地图渲染与导航"
+            title="到店取车请携带本人身份证与驾驶证，网点营业时间内均可办理"
           />
         </section>
       </div>

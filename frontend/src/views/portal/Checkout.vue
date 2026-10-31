@@ -11,7 +11,7 @@
       <el-steps :active="1" align-center class="steps">
         <el-step title="选择车辆" description="已选车型" />
         <el-step title="确认订单" description="填写租期与网点" />
-        <el-step title="完成支付" description="模拟支付" />
+        <el-step title="完成支付" description="在线支付" />
       </el-steps>
 
       <div v-loading="loading" class="grid">
@@ -73,7 +73,7 @@
                 <el-select v-model="returnStoreId" clearable placeholder="默认在取车网点归还" size="large" class="full">
                   <el-option v-for="s in stores" :key="s.id" :label="s.name" :value="s.id" />
                 </el-select>
-                <div class="field-tip">支持异地还车（模拟能力，不涉及真实门店调度）</div>
+                <div class="field-tip">支持异地还车，可在下方选择归还网点</div>
               </el-form-item>
 
               <el-form-item label="备注">
@@ -83,7 +83,7 @@
                   :rows="2"
                   maxlength="200"
                   show-word-limit
-                  placeholder="如需要儿童座椅、送车上门等（模拟备注，不影响金额）"
+                  placeholder="如需要儿童座椅、送车上门等，请在此说明（选填，不影响金额）"
                 />
               </el-form-item>
             </el-form>
@@ -95,7 +95,7 @@
               <li><b>租金</b> = 日租金 × 租期天数 × 折扣，本车折扣 {{ coefficientText(vehicle?.discountRate) }}</li>
               <li><b>押金</b> = 标准押金 × 信用押金系数，信用越好系数越低，押金越少</li>
               <li>订单提交后进入<b>待支付</b>，支付成功才会锁定车辆并进入<b>待取车</b></li>
-              <li>本平台支付为<b>模拟支付</b>，不会产生任何真实扣款</li>
+              <li>押金按信用等级折扣收取，还车结算后原路退回</li>
             </ul>
           </div>
         </section>
@@ -168,8 +168,8 @@
             <div class="pay-mock">
               <el-icon><Wallet /></el-icon>
               <div>
-                <div class="pay-name">模拟支付（微信 / 支付宝）</div>
-                <div class="pay-desc">进入收银台后选择渠道，不会真实扣款</div>
+                <div class="pay-name">在线支付（微信 / 支付宝）</div>
+                <div class="pay-desc">提交后进入收银台选择支付渠道</div>
               </div>
             </div>
           </div>
@@ -184,7 +184,7 @@
           >
             提交订单
           </el-button>
-          <p class="submit-note">提交后生成<span>待支付</span>订单，进入收银台完成模拟支付</p>
+          <p class="submit-note">提交后生成<span>待支付</span>订单，进入收银台完成支付</p>
         </aside>
       </div>
     </div>

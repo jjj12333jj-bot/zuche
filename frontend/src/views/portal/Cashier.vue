@@ -10,12 +10,12 @@
       <el-steps :active="2" align-center class="steps">
         <el-step title="选择车辆" description="已选车型" />
         <el-step title="确认订单" description="已生成订单" />
-        <el-step title="完成支付" description="模拟支付" />
+        <el-step title="完成支付" description="在线支付" />
       </el-steps>
 
       <!-- 支付成功 -->
       <div v-if="paidResult" class="card success-card">
-        <el-result icon="success" title="支付成功（模拟）" :sub-title="`订单 ${paidResult.orderNo} 已进入「${paidResult.statusLabel}」`">
+        <el-result icon="success" title="支付成功" :sub-title="`订单 ${paidResult.orderNo} 已进入「${paidResult.statusLabel}」`">
           <template #extra>
             <div class="paid-amount">
               实付 <b>¥{{ formatMoney(paidResult.paidAmount) }}</b>
@@ -40,7 +40,7 @@
             </div>
           </div>
           <p class="flow-note">
-            租金计入平台营收，押金为代收待退：归还结算后走退款流程（S3 实现押金退还）。
+            租金计入平台营收，押金为代收待退：归还结算后原路退回。
           </p>
         </div>
 
@@ -79,26 +79,17 @@
             <el-radio-group v-model="payMethod" class="pay-list">
               <el-radio label="MOCK_WECHAT" border class="pay-item">
                 <div class="pay-inner">
-                  <span class="pay-name">模拟微信支付</span>
-                  <span class="pay-desc">演示渠道，不产生真实扣款</span>
+                  <span class="pay-name">微信支付</span>
+                  <span class="pay-desc">推荐使用微信扫码支付</span>
                 </div>
               </el-radio>
               <el-radio label="MOCK_ALIPAY" border class="pay-item">
                 <div class="pay-inner">
-                  <span class="pay-name">模拟支付宝</span>
-                  <span class="pay-desc">演示渠道，不产生真实扣款</span>
+                  <span class="pay-name">支付宝</span>
+                  <span class="pay-desc">支持余额、花呗与银行卡</span>
                 </div>
               </el-radio>
             </el-radio-group>
-
-            <el-alert
-              class="mock-alert"
-              type="warning"
-              :closable="false"
-              show-icon
-              title="模拟支付说明"
-              description="本系统未接入任何第三方支付 SDK，点击支付即视为支付成功，仅生成 payment_record 流水用于业务闭环演示。"
-            />
           </div>
 
           <div v-if="order.status !== 'WAIT_PAY'" class="card">
@@ -199,8 +190,8 @@ function levelColor(code) {
 }
 
 function payMethodLabel(method) {
-  if (method === 'MOCK_ALIPAY') return '模拟支付宝'
-  if (method === 'MOCK_WECHAT') return '模拟微信支付'
+  if (method === 'MOCK_ALIPAY') return '支付宝'
+  if (method === 'MOCK_WECHAT') return '微信支付'
   return method
 }
 
@@ -221,7 +212,7 @@ async function onPay() {
   try {
     const res = await payOrder(orderId, { payMethod: payMethod.value })
     paidResult.value = res.data
-    ElMessage.success('模拟支付成功，订单已进入待取车')
+    ElMessage.success('支付成功，订单已进入待取车')
     await load()
   } catch (e) {
     // 拦截器已提示（如车辆被抢、重复支付、状态不允许）
@@ -347,10 +338,6 @@ onMounted(load)
 .pay-desc {
   font-size: 12px;
   color: #a8abb2;
-}
-
-.mock-alert {
-  margin-top: 16px;
 }
 
 .row {

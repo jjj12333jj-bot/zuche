@@ -62,7 +62,7 @@ public class RefundService {
         record.setApplyTime(now);
         record.setRefundTime(now);
         record.setChannel(CHANNEL);
-        record.setRemark("模拟退款-" + typeLabel(refundType));
+        record.setRemark("订单退款-" + typeLabel(refundType));
         record.setCreateTime(now);
         record.setUpdateTime(now);
         refundMapper.insert(record);

@@ -16,7 +16,7 @@
           <li><b>多网点</b> 支持异地还车与跨店调车</li>
           <li><b>全流程</b> 下单 · 支付 · 取还车 · 押金退还</li>
         </ul>
-        <div class="brand-foot">毕业设计演示项目 · 支付与地图均为模拟实现</div>
+        <div class="brand-foot">泉州南安店 · 泉州晋江店　全流程线上办理</div>
       </aside>
 
       <section class="form-side">
@@ -62,7 +62,7 @@
           </el-button>
         </el-form>
 
-        <el-divider class="demo-divider">演示账号 · 密码 123456</el-divider>
+        <el-divider class="demo-divider">体验账号 · 密码 123456</el-divider>
         <div class="demo-accounts">
           <el-tag
             v-for="item in demoAccounts"

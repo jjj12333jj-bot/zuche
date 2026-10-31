@@ -77,7 +77,7 @@
 
     <footer class="footer">
       <div class="page-container">
-        微租车 · 基于信用风控的汽车租赁平台 &nbsp;|&nbsp; 支付、短信、地图均为模拟实现 &nbsp;|&nbsp; 毕业设计演示
+        微租车 · 基于信用风控的汽车租赁平台 &nbsp;|&nbsp; 泉州南安店 · 泉州晋江店 &nbsp;|&nbsp; © 2026 微租车
       </div>
     </footer>
   </div>

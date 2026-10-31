@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>所有接口都要求登录（不在白名单里）。数据隔离靠 {@code user_id = 当前登录人}，
  * 而不是靠前端不显示别人的订单——越权查详情会直接查不到。</p>
  */
-@Tag(name = "03-订单", description = "试算、下单、模拟支付、取消、我的订单")
+@Tag(name = "03-订单", description = "试算、下单、支付、取消、我的订单")
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
@@ -66,11 +66,11 @@ public class OrderController {
         return Result.success(orderService.detail(id));
     }
 
-    @Operation(summary = "模拟支付", description = "待支付 → 待取车；生成 RENT + DEPOSIT 两条流水并锁定车辆")
+    @Operation(summary = "订单支付", description = "待支付 → 待取车；生成 RENT + DEPOSIT 两条流水并锁定车辆")
     @PostMapping("/{id}/pay")
     public Result<OrderPayVO> pay(@PathVariable Long id,
                                   @Valid @RequestBody(required = false) OrderPayDTO dto) {
-        return Result.success("模拟支付成功", orderService.pay(id, dto));
+        return Result.success("支付成功", orderService.pay(id, dto));
     }
 
     @Operation(summary = "取消订单",

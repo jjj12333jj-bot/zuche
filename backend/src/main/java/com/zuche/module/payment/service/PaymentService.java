@@ -89,7 +89,7 @@ public class PaymentService {
         record.setPayMethod(channel);
         record.setStatus("SUCCESS");
         record.setPayTime(now);
-        record.setRemark("模拟支付-" + type.getLabel());
+        record.setRemark("订单支付-" + type.getLabel());
         record.setCreateTime(now);
         record.setUpdateTime(now);
         return record;
@@ -100,7 +100,7 @@ public class PaymentService {
      */
     private String generatePayNo(PayType type) {
         String suffix = String.format("%06d", ThreadLocalRandom.current().nextInt(1_000_000));
-        return "MOCK" + LocalDateTime.now().format(PAY_NO_FMT) + type.name().charAt(0) + suffix;
+        return "PAY" + LocalDateTime.now().format(PAY_NO_FMT) + type.name().charAt(0) + suffix;
     }
 
     /**

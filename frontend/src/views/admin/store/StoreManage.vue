@@ -148,7 +148,7 @@
           </el-form-item>
         </div>
         <el-form-item label="详细地址" prop="address">
-          <el-input v-model="form.address" placeholder="北京市海淀区…" maxlength="120" />
+          <el-input v-model="form.address" placeholder="福建省泉州市…" maxlength="120" />
         </el-form-item>
         <div class="form-grid">
           <el-form-item label="联系电话" prop="phone">
@@ -184,7 +184,7 @@
             <el-input-number v-model="form.latitude" :precision="6" :step="0.001" controls-position="right" style="width: 100%" />
           </el-form-item>
         </div>
-        <div class="hint">经纬度仅做存储与展示，不接入地图服务。</div>
+        <div class="hint">经纬度用于网点定位与距离展示。</div>
       </el-form>
 
       <template #footer>

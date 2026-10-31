@@ -4,7 +4,7 @@
       <div class="page-head">
         <div>
           <h1>我的订单</h1>
-          <p class="sub">共 {{ total }} 笔订单 · 支付与退款均为模拟实现</p>
+          <p class="sub">共 {{ total }} 笔订单 · 支持按状态与时间筛选</p>
         </div>
         <el-button type="primary" plain @click="router.push('/vehicles')">去租车</el-button>
       </div>

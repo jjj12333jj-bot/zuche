@@ -20,7 +20,7 @@ export function getOrderDetail(id) {
   return request.get(`/orders/${id}`)
 }
 
-/** 模拟支付：生成 RENT + DEPOSIT 两条流水并锁定车辆 */
+/** 支付：生成 RENT + DEPOSIT 两条流水并锁定车辆 */
 export function payOrder(id, data) {
   return request.post(`/orders/${id}/pay`, data)
 }

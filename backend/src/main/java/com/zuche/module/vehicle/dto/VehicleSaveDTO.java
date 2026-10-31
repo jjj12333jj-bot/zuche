@@ -37,10 +37,10 @@ public class VehicleSaveDTO {
 
     @NotBlank(message = "车牌号不能为空")
     @Pattern(regexp = "^[\\u4e00-\\u9fa5][A-Z]·?[A-Z0-9]{4,6}$",
-            message = "车牌号格式不正确，例如 京A12345 或 京A·12345")
+            message = "车牌号格式不正确，例如 闽C12345 或 闽C·12345")
     private String licensePlate;
 
-    @Schema(description = "车架号，17 位；演示数据可留空")
+    @Schema(description = "车架号，17 位；选填")
     @Size(max = 32, message = "车架号最长 32 个字符")
     private String vin;
 

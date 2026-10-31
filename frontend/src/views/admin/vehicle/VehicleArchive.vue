@@ -144,7 +144,7 @@
             <el-input v-model="form.vehicleNo" maxlength="32" placeholder="V2024001" />
           </el-form-item>
           <el-form-item label="车牌号" prop="licensePlate">
-            <el-input v-model="form.licensePlate" maxlength="12" placeholder="京A·12345" />
+            <el-input v-model="form.licensePlate" maxlength="12" placeholder="闽C·A12345" />
           </el-form-item>
         </div>
         <div class="form-grid">
@@ -193,7 +193,7 @@
             <el-date-picker v-model="form.registerDate" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="width: 100%" />
           </el-form-item>
           <el-form-item label="车架号">
-            <el-input v-model="form.vin" maxlength="32" placeholder="演示数据可留空" />
+            <el-input v-model="form.vin" maxlength="32" placeholder="选填，17 位车辆识别代号" />
           </el-form-item>
         </div>
         <el-form-item label="可用状态">
