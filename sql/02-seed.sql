@@ -33,30 +33,30 @@ INSERT INTO vehicle_brand (id, brand_name, brand_logo, initial, sort_no, status)
 -- 2. 车型（承载参数与标准押金，车辆在其下实例化）
 -- ---------------------------------------------------------------------
 INSERT INTO vehicle_model (id, brand_id, model_name, category_code, seats, gearbox, fuel_type, displacement, guide_price, deposit, cover_image, description, sort_no, status) VALUES
-(1,  1, '朗逸 2023款',      'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.5L',     129.00,  800.00, '/images/cars/car-1.svg',  '省油耐开，通勤代步首选', 1, 1),
-(2,  1, '帕萨特 2023款',    'COMFORT', 5, 'AUTO', 'GASOLINE', '2.0T',     229.00, 1500.00, '/images/cars/car-2.svg',  '商务接待常用车型，后排空间大', 2, 1),
-(3,  1, '途观L 2022款',     'SUV',     7, 'AUTO', 'GASOLINE', '2.0T',     339.00, 2200.00, '/images/cars/car-3.svg',  '七座 SUV，适合家庭出行', 3, 1),
-(4,  1, 'ID.4 2022款',      'EV',      5, 'AUTO', 'ELECTRIC', '84.8kWh',  329.00, 2500.00, '/images/cars/car-4.svg',  '纯电续航 550km，充电便捷', 4, 1),
-(5,  2, '卡罗拉 2023款',    'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.2T',     139.00,  900.00, '/images/cars/car-5.svg',  '保值率高，故障率低', 5, 1),
-(6,  2, '凯美瑞 2022款',    'COMFORT', 5, 'AUTO', 'GASOLINE', '2.0L',     239.00, 1500.00, '/images/cars/car-6.svg',  '舒适性突出，长途友好', 6, 1),
-(7,  2, 'RAV4荣放 2023款',  'SUV',     5, 'AUTO', 'GASOLINE', '2.0L',     319.00, 2000.00, '/images/cars/car-7.svg',  '四驱通过性好', 7, 1),
-(8,  2, 'bZ4X 2023款',      'EV',      5, 'AUTO', 'ELECTRIC', '71.4kWh',  349.00, 2600.00, '/images/cars/car-8.svg',  '纯电 SUV，空间充裕', 8, 1),
-(9,  3, '雅阁 2023款',      'COMFORT', 5, 'AUTO', 'GASOLINE', '1.5T',     249.00, 1600.00, '/images/cars/car-9.svg',  '动力平顺，隔音优秀', 9, 1),
-(10, 3, 'CR-V 2023款',      'SUV',     5, 'AUTO', 'GASOLINE', '1.5T',     299.00, 2000.00, '/images/cars/car-10.svg', '空间魔术师，家用 SUV 标杆', 10, 1),
-(11, 4, '轩逸 2022款',      'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.6L',     119.00,  800.00, '/images/cars/car-11.svg', '座椅舒适，油耗低', 11, 1),
-(12, 5, '英朗 2022款',      'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.3T',     109.00,  600.00, '/images/cars/car-12.svg', '入门代步，性价比高', 12, 1),
-(13, 5, '君威 2021款',      'COMFORT', 5, 'AUTO', 'GASOLINE', '1.5T',     199.00, 1200.00, '/images/cars/car-13.svg', '底盘扎实，高速稳', 13, 1),
-(14, 5, '微蓝6 2022款',     'EV',      5, 'AUTO', 'ELECTRIC', '61.1kWh',  219.00, 1600.00, '/images/cars/car-14.svg', '合资纯电，代步经济', 14, 1),
-(15, 6, '宋PLUS 2023款',    'SUV',     5, 'AUTO', 'HYBRID',   '1.5T DM-i',279.00, 1800.00, '/images/cars/car-15.svg', '插混省油，市区通勤友好', 15, 1),
-(16, 6, '汉EV 2023款',      'EV',      5, 'AUTO', 'ELECTRIC', '85.4kWh',  359.00, 2800.00, '/images/cars/car-16.svg', '中大型纯电轿车，加速快', 16, 1),
-(17, 6, '秦PLUS EV 2023款', 'EV',      5, 'AUTO', 'ELECTRIC', '57kWh',    259.00, 2000.00, '/images/cars/car-17.svg', '高性价比纯电家轿', 17, 1),
-(18, 6, '海豹 2023款',      'EV',      5, 'AUTO', 'ELECTRIC', '82.5kWh',  339.00, 2600.00, '/images/cars/car-18.svg', '运动取向纯电轿车', 18, 1),
-(19, 7, 'Model 3 2023款',   'EV',      5, 'AUTO', 'ELECTRIC', '78.4kWh',  399.00, 3000.00, '/images/cars/car-19.svg', '智能辅助驾驶，超充网络', 19, 1),
-(20, 7, 'Model Y 2023款',   'EV',      5, 'AUTO', 'ELECTRIC', '78.4kWh',  459.00, 3500.00, '/images/cars/car-20.svg', '大空间纯电 SUV', 20, 1),
-(21, 8, 'A6L 2023款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     699.00, 5000.00, '/images/cars/car-21.svg', '商务旗舰，接待首选', 21, 1),
-(22, 8, 'Q5L 2022款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     659.00, 4500.00, '/images/cars/car-22.svg', '豪华中型 SUV', 22, 1),
-(23, 9, '5系 2023款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     799.00, 6000.00, '/images/cars/car-23.svg', '行政级豪华轿车', 23, 1),
-(24, 9, '3系 2023款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     599.00, 4000.00, '/images/cars/car-24.svg', '操控与舒适兼顾', 24, 1);
+(1,  1, '朗逸 2023款',      'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.5L',     129.00,  800.00, '/images/cars/car-1.jpg',  '省油耐开，通勤代步首选', 1, 1),
+(2,  1, '帕萨特 2023款',    'COMFORT', 5, 'AUTO', 'GASOLINE', '2.0T',     229.00, 1500.00, '/images/cars/car-2.jpg',  '商务接待常用车型，后排空间大', 2, 1),
+(3,  1, '途观L 2022款',     'SUV',     7, 'AUTO', 'GASOLINE', '2.0T',     339.00, 2200.00, '/images/cars/car-3.jpg',  '七座 SUV，适合家庭出行', 3, 1),
+(4,  1, 'ID.4 2022款',      'EV',      5, 'AUTO', 'ELECTRIC', '84.8kWh',  329.00, 2500.00, '/images/cars/car-4.jpg',  '纯电续航 550km，充电便捷', 4, 1),
+(5,  2, '卡罗拉 2023款',    'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.2T',     139.00,  900.00, '/images/cars/car-5.jpg',  '保值率高，故障率低', 5, 1),
+(6,  2, '凯美瑞 2022款',    'COMFORT', 5, 'AUTO', 'GASOLINE', '2.0L',     239.00, 1500.00, '/images/cars/car-6.jpg',  '舒适性突出，长途友好', 6, 1),
+(7,  2, 'RAV4荣放 2023款',  'SUV',     5, 'AUTO', 'GASOLINE', '2.0L',     319.00, 2000.00, '/images/cars/car-7.jpg',  '四驱通过性好', 7, 1),
+(8,  2, 'bZ4X 2023款',      'EV',      5, 'AUTO', 'ELECTRIC', '71.4kWh',  349.00, 2600.00, '/images/cars/car-8.jpg',  '纯电 SUV，空间充裕', 8, 1),
+(9,  3, '雅阁 2023款',      'COMFORT', 5, 'AUTO', 'GASOLINE', '1.5T',     249.00, 1600.00, '/images/cars/car-9.jpg',  '动力平顺，隔音优秀', 9, 1),
+(10, 3, 'CR-V 2023款',      'SUV',     5, 'AUTO', 'GASOLINE', '1.5T',     299.00, 2000.00, '/images/cars/car-10.jpg', '空间魔术师，家用 SUV 标杆', 10, 1),
+(11, 4, '轩逸 2022款',      'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.6L',     119.00,  800.00, '/images/cars/car-11.jpg', '座椅舒适，油耗低', 11, 1),
+(12, 5, '英朗 2022款',      'ECONOMY', 5, 'AUTO', 'GASOLINE', '1.3T',     109.00,  600.00, '/images/cars/car-12.jpg', '入门代步，性价比高', 12, 1),
+(13, 5, '君威 2021款',      'COMFORT', 5, 'AUTO', 'GASOLINE', '1.5T',     199.00, 1200.00, '/images/cars/car-13.jpg', '底盘扎实，高速稳', 13, 1),
+(14, 5, '微蓝6 2022款',     'EV',      5, 'AUTO', 'ELECTRIC', '61.1kWh',  219.00, 1600.00, '/images/cars/car-14.jpg', '合资纯电，代步经济', 14, 1),
+(15, 6, '宋PLUS 2023款',    'SUV',     5, 'AUTO', 'HYBRID',   '1.5T DM-i',279.00, 1800.00, '/images/cars/car-15.jpg', '插混省油，市区通勤友好', 15, 1),
+(16, 6, '汉EV 2023款',      'EV',      5, 'AUTO', 'ELECTRIC', '85.4kWh',  359.00, 2800.00, '/images/cars/car-16.jpg', '中大型纯电轿车，加速快', 16, 1),
+(17, 6, '秦PLUS EV 2023款', 'EV',      5, 'AUTO', 'ELECTRIC', '57kWh',    259.00, 2000.00, '/images/cars/car-17.jpg', '高性价比纯电家轿', 17, 1),
+(18, 6, '海豹 2023款',      'EV',      5, 'AUTO', 'ELECTRIC', '82.5kWh',  339.00, 2600.00, '/images/cars/car-18.jpg', '运动取向纯电轿车', 18, 1),
+(19, 7, 'Model 3 2023款',   'EV',      5, 'AUTO', 'ELECTRIC', '78.4kWh',  399.00, 3000.00, '/images/cars/car-19.jpg', '智能辅助驾驶，超充网络', 19, 1),
+(20, 7, 'Model Y 2023款',   'EV',      5, 'AUTO', 'ELECTRIC', '78.4kWh',  459.00, 3500.00, '/images/cars/car-20.jpg', '大空间纯电 SUV', 20, 1),
+(21, 8, 'A6L 2023款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     699.00, 5000.00, '/images/cars/car-21.jpg', '商务旗舰，接待首选', 21, 1),
+(22, 8, 'Q5L 2022款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     659.00, 4500.00, '/images/cars/car-22.jpg', '豪华中型 SUV', 22, 1),
+(23, 9, '5系 2023款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     799.00, 6000.00, '/images/cars/car-23.jpg', '行政级豪华轿车', 23, 1),
+(24, 9, '3系 2023款',       'LUXURY',  5, 'AUTO', 'GASOLINE', '2.0T',     599.00, 4000.00, '/images/cars/car-24.jpg', '操控与舒适兼顾', 24, 1);
 
 -- ---------------------------------------------------------------------
 -- 3. 车辆（每个车型实例化 1 台，共 24 台；车牌/VIN 由 id 派生保证唯一）
@@ -85,13 +85,13 @@ SELECT
     '车况良好，手续齐全，支持异地还车。'
 FROM vehicle_model m;
 
--- 车辆图片：每台 3 张（外观/内饰/尾部），全部使用前端本地静态图，离线可演示
+-- 车辆图片：每台 3 张同车型实拍（前 45° / 正面 / 后 45°），本地静态资源，离线可演示
 INSERT INTO vehicle_image (vehicle_id, image_url, image_type, sort_no)
-SELECT id, CONCAT('/images/cars/car-', model_id, '.svg'), 'EXTERIOR', 1 FROM vehicle
+SELECT id, CONCAT('/images/cars/car-', model_id, '.jpg'), 'EXTERIOR', 1 FROM vehicle
 UNION ALL
-SELECT id, '/images/cars/gallery/interior.svg', 'INTERIOR', 2 FROM vehicle
+SELECT id, CONCAT('/images/cars/car-', model_id, '-2.jpg'), 'EXTERIOR', 2 FROM vehicle
 UNION ALL
-SELECT id, '/images/cars/gallery/rear.svg', 'EXTERIOR', 3 FROM vehicle;
+SELECT id, CONCAT('/images/cars/car-', model_id, '-3.jpg'), 'EXTERIOR', 3 FROM vehicle;
 
 -- 保险：每台车交强险 + 商业险
 -- id<=6 的交强险在 30 天内到期（到期提醒演示用），id>=7 的按 30+N 天均匀铺开；
@@ -622,7 +622,7 @@ UPDATE order_evaluation e
 UPDATE order_evaluation e
   JOIN vehicle v       ON v.id = e.vehicle_id
   JOIN vehicle_model m ON m.id = v.model_id
-   SET e.images = JSON_ARRAY(m.cover_image, '/images/cars/car-8.svg')
+   SET e.images = JSON_ARRAY(m.cover_image, '/images/cars/car-8.jpg')
  WHERE e.id IN (SELECT id FROM (
         SELECT id FROM order_evaluation WHERE deleted = 0 ORDER BY id LIMIT 5 OFFSET 5) t);
 

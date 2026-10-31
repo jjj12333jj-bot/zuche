@@ -1,13 +1,13 @@
 /**
- * 生成本地演示图片（全部 SVG，离线可用，不依赖任何外网图床）
+ * 生成本地静态图片（SVG，离线可用，不依赖任何外网图床）
  *
  * 输出目录：frontend/public/images
  *   brands/brand-{1..9}.svg      品牌 LOGO
- *   cars/car-{1..24}.svg         车型封面（与 seed 中 vehicle_model.id 对应）
- *   cars/gallery/*.svg           内饰 / 仪表 / 尾部通用图
  *   banners/banner-{1..3}.svg    首页轮播
  *   placeholder.svg              图片加载失败兜底
  *   avatar/default.svg           默认头像
+ *
+ * 车型图（cars/*.jpg）为实拍照片，不由本脚本生成，见 cars/README.md。
  *
  * 运行：node scripts/generate-demo-images.mjs（在 frontend 目录）
  */
@@ -328,12 +328,8 @@ function write(rel, content) {
 }
 
 BRANDS.forEach((b) => write(`brands/brand-${b.id}.svg`, brandSvg(b)))
-MODELS.forEach((m, i) => write(`cars/car-${m.id}.svg`, carCover(m, i)))
-write('cars/gallery/interior.svg', interiorSvg())
-write('cars/gallery/dashboard.svg', dashboardSvg())
-write('cars/gallery/rear.svg', rearSvg())
 ;[1, 2, 3].forEach((i) => write(`banners/banner-${i}.svg`, bannerSvg(i)))
 write('placeholder.svg', placeholderSvg())
 write('avatar/default.svg', avatarSvg())
 
-console.log(`已生成 ${BRANDS.length} 个品牌、${MODELS.length} 张车型图、3 张通用图、3 张轮播图、占位图与头像`)
+console.log(`已生成 ${BRANDS.length} 个品牌、3 张轮播图、占位图与头像（车型图使用 cars/*.jpg 实拍）`)

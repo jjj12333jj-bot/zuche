@@ -194,7 +194,7 @@
           <span class="form-hint">下单时会再乘信用系数</span>
         </el-form-item>
         <el-form-item label="封面图">
-          <el-input v-model="form.coverImage" placeholder="/images/cars/car-1.svg" />
+          <el-input v-model="form.coverImage" placeholder="/images/cars/car-1.jpg" />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="2" maxlength="500" show-word-limit />

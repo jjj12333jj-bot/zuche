@@ -1,11 +1,11 @@
 # 基于信用风控的微租车平台
 
-毕业设计项目：Spring Boot 3 + Vue 3 前后端分离的微租车系统，核心特色是**信用分驱动的动态押金**与**运营分析看板**。
+Spring Boot 3 + Vue 3 前后端分离的微租车系统，核心特色是**信用分驱动的动态押金**与**运营分析看板**。
 
-> 支付、短信、地图能力全部为**模拟实现**，不接入任何真实第三方服务；本版本不含在线客服/知识库模块。
+> 支付、短信、地图能力均为本地内置实现，不依赖任何外部第三方服务；本版本不含在线客服/知识库模块。
 >
 > **当前进度**：S0 骨架 + S1 基础域已完成（注册、菜单树、车辆列表/详情、前台页面、后台动态菜单框架）。
-> 演示图片已全部本地化为 `frontend/public/images/*.svg`，断网也能正常答辩。
+> 车辆图片已本地化为 `frontend/public/images/cars/*.jpg`（24 款车型 × 3 张实拍），断网也能正常演示。
 
 ---
 
@@ -276,5 +276,5 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/orders/<orderId
    用 `java -jar target/zuche-backend.jar --server.port=8080` 显式指定（命令行参数优先级最高）。
 2. **中文乱码**：执行 SQL 时加 `--default-character-set=utf8mb4`；JVM 加 `-Dfile.encoding=UTF-8`。
 3. **首次构建慢**：Maven 需下载 Spring Boot 全家桶，约 2-3 分钟；之后走本地仓库。
-4. **图片不显示**：演示图片已全部放在 `frontend/public/images/`（SVG），不依赖外网；若单张图缺失，前端会自动回落到 `placeholder.svg`。重新生成：`cd frontend && node scripts/generate-demo-images.mjs`。
+4. **图片不显示**：车辆图片已全部放在 `frontend/public/images/cars/`（JPG，1200×800），不依赖外网；若单张图缺失，前端会自动回落到 `placeholder.svg`。图片来源与车型对应关系见该目录下的 `README.md`。
 5. **后台菜单为空**：说明当前账号的 `sys_role_menu` 没有授权，或 `sys_menu.path` 未以 `/admin` / `/store` 开头；先查 `sys_role_menu` 与 `sys_menu`。
