@@ -1,27 +1,33 @@
 <template>
   <div class="login-page">
-    <div class="login-card">
-      <aside class="brand">
-        <div class="brand-logo">
-          <el-icon :size="26"><Van /></el-icon>
-          <span>微租车</span>
-        </div>
-        <h1>信用越好，押金越低</h1>
-        <p class="brand-desc">
-          平台依据按时归还率、取消率、逾期次数与完成订单数计算信用分，
-          不同信用等级对应不同押金系数，优秀档押金低至 8 折。
-        </p>
-        <ul class="brand-points">
-          <li><b>押金 8 折</b> 优秀档专享</li>
-          <li><b>多网点</b> 支持异地还车与跨店调车</li>
-          <li><b>全流程</b> 下单 · 支付 · 取还车 · 押金退还</li>
-        </ul>
-        <div class="brand-foot">泉州南安店 · 泉州晋江店　全流程线上办理</div>
-      </aside>
+    <!-- 全屏实拍背景：公路 + 车 + 夕阳，纯摄影作品（Pexels），做轻微推拉动效 -->
+    <div class="bg" aria-hidden="true"></div>
+    <div class="veil" aria-hidden="true"></div>
 
-      <section class="form-side">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">
+          <el-icon :size="19"><Van /></el-icon>
+        </span>
+        <span class="brand-name">微租车</span>
+      </div>
+      <div class="topbar-meta">泉州南安店 · 泉州晋江店</div>
+    </header>
+
+    <main class="stage">
+      <!-- 背景上的品牌文案：如需彻底隐藏，给 .hero 加 v-if="false" 即可 -->
+      <section class="hero">
+        <p class="hero-eyebrow">信用分驱动 · 动态押金</p>
+        <h1>信用越好<br />押金越低</h1>
+        <p class="hero-desc">
+          平台依据按时归还率、取消率、逾期次数与完成订单数计算信用分，等级越高押金越低，优秀档低至 8 折。
+        </p>
+      </section>
+
+      <!-- 半透明毛玻璃卡片：只保留表单，背景透出来但不影响阅读 -->
+      <section class="card">
         <h2>账号登录</h2>
-        <p class="text-muted">请使用平台分配的账号登录，不同角色进入不同工作台</p>
+        <p class="card-sub">请使用平台分配的账号登录，不同角色进入不同工作台</p>
 
         <el-form
           ref="formRef"
@@ -67,7 +73,7 @@
           <span class="text-muted">（注册默认 100 信用分 · 良好档）</span>
         </div>
       </section>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -135,101 +141,238 @@ async function onSubmit() {
 
 <style scoped>
 .login-page {
+  position: relative;
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #eef3fb 0%, #f7f9fc 55%, #eef7f2 100%);
-  padding: 24px;
+  flex-direction: column;
+  overflow: hidden;
+  color: #fff;
 }
 
-.login-card {
-  display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+/* ---------- 背景 ---------- */
+.bg {
+  position: fixed;
+  inset: 0;
+  background: url('/images/login/bg.jpg') center 58% / cover no-repeat;
+  transform: scale(1.06);
+  animation: drift 28s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes drift {
+  from {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.13) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+/* 左侧压暗保证文案可读，右侧留亮让卡片浮起来 */
+.veil {
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(
+      100deg,
+      rgba(6, 15, 28, 0.82) 0%,
+      rgba(6, 15, 28, 0.6) 30%,
+      rgba(6, 15, 28, 0.24) 56%,
+      rgba(6, 15, 28, 0.48) 100%
+    ),
+    radial-gradient(120% 85% at 76% 12%, rgba(255, 168, 64, 0.18), transparent 62%);
+}
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  position: relative;
+  z-index: 2;
   width: 100%;
-  max-width: 940px;
-  min-height: 520px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 18px 48px rgba(31, 45, 61, 0.1);
-  overflow: hidden;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26px 46px;
 }
 
 .brand {
-  padding: 40px 36px;
-  background: #1f3a5f;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-}
-
-.brand-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 20px;
+  gap: 11px;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+}
+
+.brand-name {
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
-.brand h1 {
-  font-size: 28px;
-  line-height: 1.35;
-  margin: 32px 0 14px;
-  font-weight: 600;
+.topbar-meta {
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.brand-desc {
-  font-size: 14px;
-  line-height: 1.85;
-  color: rgba(255, 255, 255, 0.78);
-  margin: 0;
+/* ---------- 主区 ---------- */
+.stage {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 8px 46px 56px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  align-items: center;
+  gap: 56px;
 }
 
-.brand-points {
-  list-style: none;
-  padding: 0;
-  margin: 28px 0 0;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.brand-points li {
-  margin-bottom: 12px;
-}
-
-.brand-points b {
-  color: #7fd4a8;
-  margin-right: 8px;
-}
-
-.brand-foot {
-  margin-top: auto;
+.hero-eyebrow {
+  margin: 0 0 14px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.62);
+  text-transform: uppercase;
 }
 
-.form-side {
-  padding: 40px 40px 32px;
+.hero h1 {
+  margin: 0 0 20px;
+  font-size: clamp(34px, 3.9vw, 52px);
+  line-height: 1.24;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-shadow: 0 8px 34px rgba(0, 0, 0, 0.5);
 }
 
-.form-side h2 {
+.hero-desc {
+  margin: 0;
+  max-width: 460px;
+  font-size: 14px;
+  line-height: 2.05;
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+  text-wrap: pretty;
+}
+
+/* ---------- 毛玻璃卡片 ---------- */
+.card {
+  width: 100%;
+  padding: 36px 32px 30px;
+  border-radius: 20px;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.87) 0%, rgba(255, 255, 255, 0.71) 100%);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 30px 80px rgba(3, 10, 22, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  color: #1f2d3d;
+  animation: rise 0.65s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card h2 {
   margin: 0 0 6px;
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: 0.5px;
+  color: #16233a;
 }
 
-.form-side p {
-  margin: 0 0 22px;
+.card-sub {
+  margin: 0 0 26px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.card :deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+.card :deep(.el-form-item__label) {
   font-size: 13px;
+  padding-bottom: 6px;
+  color: #45536a;
+}
+
+.card :deep(.el-input__wrapper) {
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 1px rgba(31, 58, 95, 0.1) inset;
+  transition: box-shadow 0.18s ease;
+}
+
+.card :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px rgba(47, 124, 246, 0.4) inset;
+}
+
+.card :deep(.el-input__wrapper.is-focus) {
+  box-shadow:
+    0 0 0 1px #2f7cf6 inset,
+    0 0 0 3px rgba(47, 124, 246, 0.14);
 }
 
 .submit-btn {
   width: 100%;
-  margin-top: 6px;
-  height: 44px;
+  height: 48px;
+  margin-top: 2px;
   font-size: 15px;
-  letter-spacing: 4px;
+  letter-spacing: 6px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1f6fe0 0%, #3d9bff 100%);
+  box-shadow: 0 14px 26px rgba(31, 111, 224, 0.32);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+.submit-btn:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+  box-shadow: 0 18px 32px rgba(31, 111, 224, 0.4);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+.demo-divider {
+  margin: 26px 0 18px;
+}
+
+.demo-divider :deep(.el-divider__text) {
+  padding: 0 10px;
+  font-size: 12px;
+  color: #7b8798;
+  background: transparent;
 }
 
 .demo-accounts {
@@ -238,24 +381,30 @@ async function onSubmit() {
   gap: 8px;
 }
 
-.demo-divider :deep(.el-divider__text) {
-  font-size: 12px;
-  color: #909399;
-  white-space: nowrap;
+/* Element Plus 的 plain 标签是三重类选择器，这里拉高优先级才能压住默认色 */
+.card :deep(.el-tag.demo-tag) {
+  cursor: pointer;
+  color: #2f6fd0;
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(47, 124, 246, 0.3);
+  transition: all 0.18s ease;
 }
 
-.demo-tag {
-  cursor: pointer;
+.card :deep(.el-tag.demo-tag:hover) {
+  color: #1f6fe0;
+  background: #fff;
+  border-color: #2f7cf6;
+  transform: translateY(-1px);
 }
 
 .register-link {
-  margin-top: 18px;
+  margin-top: 20px;
   font-size: 13px;
-  color: #606266;
+  color: #5b6b80;
 }
 
 .register-link a {
-  color: #409eff;
+  color: #1f6fe0;
   font-weight: 600;
   margin: 0 4px;
 }
@@ -263,14 +412,52 @@ async function onSubmit() {
 .register-link .text-muted {
   font-size: 12px;
   margin-left: 4px;
+  color: #8a97a8;
 }
 
-@media (max-width: 860px) {
-  .login-card {
+/* ---------- 适配 ---------- */
+@media (max-width: 980px) {
+  .stage {
     grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 24px;
+    padding: 8px 24px 40px;
   }
-  .brand {
+
+  .hero {
     display: none;
+  }
+
+  .card {
+    max-width: 420px;
+  }
+
+  .topbar {
+    padding: 20px 24px;
+  }
+
+  .topbar-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .bg {
+    background-image: url('/images/login/bg-sm.jpg');
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 26px 20px 22px;
+    border-radius: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg,
+  .card {
+    animation: none;
   }
 }
 </style>
