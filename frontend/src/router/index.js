@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import { getToken } from '@/utils/authSession'
 
 /**
  * 路由结构：
@@ -284,13 +285,19 @@ function homeOf(roleCode) {
 router.beforeEach(async (to) => {
   document.title = to.meta.title ? `${to.meta.title} · 微租车` : '微租车'
 
-  const token = localStorage.getItem('zuche_token')
+  const userStore = useUserStore()
+
+  // 新标签页换账号（/login?switch=1）：只清本标签页继承来的身份，原标签页照旧
+  if (to.path === '/login' && to.query.switch === '1') {
+    userStore.logout()
+  }
+
+  const token = getToken()
   if (to.meta.requiresAuth && !token) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (!token) return true
 
-  const userStore = useUserStore()
   if (!userStore.menuLoaded) {
     try {
       await userStore.loadMenus()

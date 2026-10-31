@@ -54,12 +54,17 @@
         </div>
 
         <div class="header-right">
-          <el-tag size="small" effect="plain" :type="isAdmin ? 'primary' : 'warning'">
+          <el-tag
+            size="small"
+            effect="plain"
+            :type="isAdmin ? 'primary' : 'warning'"
+            :title="`当前标签页登录：${userStore.displayName} · ${userStore.roleLabel}（与其他标签页互不影响）`"
+          >
             {{ isAdmin ? '系统管理员' : '网点管理员' }}
           </el-tag>
 
           <el-dropdown @command="onCommand">
-            <span class="user-entry">
+            <span class="user-entry" :title="`当前标签页：${userStore.displayName} · ${userStore.roleLabel}`">
               <el-avatar :size="28" :src="resolveImage(userStore.userInfo?.avatar, DEFAULT_AVATAR)">
                 {{ userStore.displayName.slice(0, 1) }}
               </el-avatar>
@@ -70,7 +75,8 @@
               <el-dropdown-menu>
                 <el-dropdown-item command="portal">前台首页</el-dropdown-item>
                 <el-dropdown-item command="refresh">刷新用户信息</el-dropdown-item>
-                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="newTab" divided>新标签页登录其他账号</el-dropdown-item>
+                <el-dropdown-item command="logout">退出本标签页</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -89,6 +95,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import { openLoginInNewTab } from '@/utils/authSession'
 import { filterMenuByPrefix, findMenuTrail } from '@/utils/menu'
 import { resolveImage, DEFAULT_AVATAR } from '@/utils/image'
 import SidebarItem from './SidebarItem.vue'
@@ -117,8 +124,14 @@ function onCommand(command) {
       .refresh()
       .then(() => ElMessage.success('用户信息已刷新'))
       .catch(() => {})
+  } else if (command === 'newTab') {
+    if (!openLoginInNewTab()) {
+      ElMessage.warning('浏览器拦截了新窗口，请手动新建标签页访问 /login')
+    }
   } else if (command === 'logout') {
-    ElMessageBox.confirm('确定退出登录吗？', '提示', { type: 'warning' })
+    ElMessageBox.confirm('只退出当前标签页，其他标签页的登录状态不受影响。确定退出吗？', '提示', {
+      type: 'warning'
+    })
       .then(() => {
         userStore.logout()
         ElMessage.success('已退出登录')

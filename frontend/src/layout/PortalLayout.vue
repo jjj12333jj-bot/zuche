@@ -43,7 +43,7 @@
             </el-button>
 
             <el-dropdown @command="onCommand">
-              <span class="user-entry">
+              <span class="user-entry" :title="`当前标签页：${userStore.displayName} · ${userStore.roleLabel}`">
                 <el-avatar :size="28" :src="resolveImage(userStore.userInfo?.avatar, DEFAULT_AVATAR)">
                   {{ (userStore.userInfo?.realName || 'U').slice(0, 1) }}
                 </el-avatar>
@@ -57,7 +57,8 @@
                   <el-dropdown-item v-if="!userStore.isUser" command="workspace">
                     {{ userStore.isAdmin ? '系统管理台' : '网点工作台' }}
                   </el-dropdown-item>
-                  <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+                  <el-dropdown-item command="newTab" divided>新标签页登录其他账号</el-dropdown-item>
+                  <el-dropdown-item command="logout">退出本标签页</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -87,6 +88,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import { openLoginInNewTab } from '@/utils/authSession'
 import { resolveImage, DEFAULT_AVATAR } from '@/utils/image'
 
 const route = useRoute()
@@ -120,7 +122,9 @@ function goWorkspace() {
 
 function onCommand(command) {
   if (command === 'logout') {
-    ElMessageBox.confirm('确定退出登录吗？', '提示', { type: 'warning' })
+    ElMessageBox.confirm('只退出当前标签页，其他标签页的登录状态不受影响。确定退出吗？', '提示', {
+      type: 'warning'
+    })
       .then(() => {
         userStore.logout()
         ElMessage.success('已退出登录')
@@ -133,6 +137,10 @@ function onCommand(command) {
     router.push('/orders')
   } else if (command === 'workspace') {
     goWorkspace()
+  } else if (command === 'newTab') {
+    if (!openLoginInNewTab()) {
+      ElMessage.warning('浏览器拦截了新窗口，请手动新建标签页访问 /login')
+    }
   }
 }
 
