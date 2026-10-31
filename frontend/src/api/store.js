@@ -85,3 +85,20 @@ export function approveDispatch(id, data) {
 export function rejectDispatch(id, data) {
   return request.post(`/admin/dispatch/${id}/reject`, data)
 }
+
+/* ==================== 客户评价（网点端） ==================== */
+
+/** 本网点评价统计：综合/车况/服务三项均分、待回复数 */
+export function getStoreEvaluationStats() {
+  return request.get('/store/evaluations/stats')
+}
+
+/** 本网点评价分页：{ rating, unreplied, keyword, page, size } */
+export function getStoreEvaluations(params) {
+  return request.get('/store/evaluations', { params })
+}
+
+/** 回复本网点评价：{ reply }；只能回复不能删除 */
+export function replyStoreEvaluation(id, data) {
+  return request.post(`/store/evaluations/${id}/reply`, data)
+}

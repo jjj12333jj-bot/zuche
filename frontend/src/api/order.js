@@ -44,3 +44,11 @@ export function applyReturnOrder(id) {
 export function confirmReturnOrder(id) {
   return request.post(`/orders/${id}/return-confirm`)
 }
+
+/**
+ * 发表评价：{ vehicleRating, storeRating, content }
+ * 只能对自己的已完成订单提交，一单一评；综合分由后端算，前端不传
+ */
+export function submitEvaluation(id, data) {
+  return request.post(`/orders/${id}/evaluation`, data)
+}

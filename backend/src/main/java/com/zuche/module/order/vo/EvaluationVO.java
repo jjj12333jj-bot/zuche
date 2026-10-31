@@ -41,10 +41,16 @@ public class EvaluationVO {
 
     private String licensePlate;
 
-    @Schema(description = "1~5 星")
+    @Schema(description = "综合评分 1~5，车辆与门店两项平均")
     private Integer rating;
 
-    @Schema(description = "星级文案，如「非常满意」")
+    @Schema(description = "车辆状况评分 1~5")
+    private Integer vehicleRating;
+
+    @Schema(description = "门店服务评分 1~5")
+    private Integer storeRating;
+
+    @Schema(description = "综合星级文案，如「非常满意」")
     private String ratingLabel;
 
     private String content;

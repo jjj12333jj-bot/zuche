@@ -64,6 +64,12 @@ UPDATE vehicle
 SET license_plate = CONCAT('闽C·', SUBSTRING(license_plate, 4))
 WHERE license_plate LIKE '京%';
 
+-- 5.1 order_item 里的车牌是下单时的快照，不同步就会出现"车辆档案是闽C、订单明细还是京B"
+UPDATE order_item oi
+  JOIN vehicle v ON v.id = oi.vehicle_id
+   SET oi.license_plate = v.license_plate
+ WHERE oi.license_plate <> v.license_plate;
+
 -- 6. 删除多余网点（store 表保留，仅数据行由 4 条变 2 条）
 DELETE FROM store WHERE id IN (3, 4);
 

@@ -4,9 +4,9 @@
       <div>
         <h2>评价管理</h2>
         <p class="sub">
-          评价<strong>只隐藏、不删除</strong>。差评被删掉，运营就失去了改进口碑的依据，
-          用户也会发现自己的评价凭空消失。隐藏保留原文与图片，前台不展示，后台随时能查、能恢复。
-          回复采用覆盖式：第一条写错了可以直接改，不必再发一条把对话搞乱。
+          两级处置：<strong>隐藏</strong>用于本身没问题、只是不适合挂前台的评价，随时可恢复；
+          <strong>删除</strong>只针对辱骂、广告、泄露隐私等违规内容，且仅系统管理员可操作。
+          网点作为商家只有解释性回复权，不能删自家差评——让商家既当运动员又当裁判，评分就没人信了。
         </p>
       </div>
       <div class="head-actions">
@@ -20,8 +20,16 @@
         <div class="stat-value">{{ stats.total }}</div>
       </div>
       <div class="stat">
-        <div class="stat-label">平均分</div>
+        <div class="stat-label">综合均分</div>
         <div class="stat-value score-value">{{ stats.avgRating }}<i>/5</i></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">车况均分</div>
+        <div class="stat-value score-value">{{ stats.avgVehicleRating }}<i>/5</i></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">服务均分</div>
+        <div class="stat-value score-value">{{ stats.avgStoreRating }}<i>/5</i></div>
       </div>
       <div class="stat">
         <div class="stat-label">五星好评</div>
@@ -78,10 +86,12 @@
             <div class="cell-sub">{{ row.licensePlate }} · {{ row.storeName }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="评分" width="132">
+        <el-table-column label="评分" width="150">
           <template #default="{ row }">
             <el-rate :model-value="row.rating" disabled size="small" />
-            <div class="cell-sub">{{ row.ratingLabel }}</div>
+            <div class="cell-sub">
+              车况 {{ row.vehicleRating }}.0 · 服务 {{ row.storeRating }}.0
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="评价内容" min-width="260">
@@ -120,7 +130,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="130" fixed="right" align="center">
+        <el-table-column label="操作" width="180" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="openReply(row)">
               {{ row.reply ? '改回复' : '回复' }}
@@ -133,6 +143,7 @@
             >
               {{ row.status === 1 ? '隐藏' : '展示' }}
             </el-button>
+            <el-button link type="danger" size="small" @click="removeRow(row)">删除</el-button>
           </template>
         </el-table-column>
         <template #empty>
@@ -187,6 +198,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import {
+  deleteEvaluation,
   getEvaluationStats,
   getEvaluations,
   replyEvaluation,
@@ -298,6 +310,41 @@ async function toggleStatus(row) {
   }
 }
 
+/**
+ * 删除违规评价
+ *
+ * 和「隐藏」分开做，是因为两者的心智完全不同：隐藏是收起来，删除是处置。
+ * 删除前要填原因，写进操作日志，事后能回答"这条为什么没了"。
+ */
+async function removeRow(row) {
+  let reason = ''
+  try {
+    const res = await ElMessageBox.prompt(
+      `确认删除「${row.customerName || row.username || '该用户'}」对 ${row.vehicleName || '该车辆'} 的评价？\n` +
+        '删除后前台与列表都不再显示。仅限辱骂、广告、泄露隐私等违规内容，\n' +
+        '普通差评请用「隐藏」，删了就没法复盘了。',
+      '删除评价',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        inputPlaceholder: '删除原因，如：含广告链接',
+        inputValidator: (v) => (v && v.trim() ? true : '请填写删除原因')
+      }
+    )
+    reason = res.value.trim()
+  } catch (e) {
+    return
+  }
+  try {
+    await deleteEvaluation(row.id, { reason })
+    ElMessage.success('评价已删除')
+    await Promise.all([load(), loadStats()])
+  } catch (e) {
+    ElMessage.error(e?.message || '删除失败')
+  }
+}
+
 onMounted(() => {
   load()
   loadStats()
@@ -344,7 +391,8 @@ onMounted(() => {
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  /* 8 张卡：总数 / 综合 / 车况 / 服务 一行，好评与回复相关一行，4×2 比 6+2 整齐 */
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 

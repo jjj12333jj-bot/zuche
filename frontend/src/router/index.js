@@ -255,6 +255,12 @@ const routes = [
         meta: { title: '网点订单' }
       },
       {
+        path: 'evaluations',
+        name: 'StoreEvaluations',
+        component: () => import('@/views/store/EvaluationReply.vue'),
+        meta: { title: '客户评价' }
+      },
+      {
         path: ':pathMatch(.*)*',
         name: 'StorePlaceholder',
         component: () => import('@/views/admin/Placeholder.vue'),

@@ -59,6 +59,16 @@
             <el-button v-if="o.canPay" size="small" type="primary" @click="router.push(`/cashier/${o.id}`)">
               去支付
             </el-button>
+            <el-button
+              v-if="o.canEvaluate"
+              size="small"
+              type="warning"
+              plain
+              @click="router.push(`/orders/${o.id}`)"
+            >
+              去评价
+            </el-button>
+            <el-tag v-else-if="o.evaluated" size="small" type="info" effect="plain">已评价</el-tag>
           </div>
         </div>
 

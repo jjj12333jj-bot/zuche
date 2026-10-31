@@ -19,7 +19,9 @@ import com.zuche.module.order.dto.OrderQuoteDTO;
 import com.zuche.module.order.entity.LeaseOrder;
 import com.zuche.module.order.entity.OrderItem;
 import com.zuche.module.order.mapper.LeaseOrderMapper;
+import com.zuche.module.order.mapper.OrderEvaluationMapper;
 import com.zuche.module.order.mapper.OrderItemMapper;
+import com.zuche.module.order.vo.EvaluationVO;
 import com.zuche.module.order.vo.OrderCreateVO;
 import com.zuche.module.order.vo.OrderCancelVO;
 import com.zuche.module.order.vo.OrderDetailVO;
@@ -53,8 +55,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -90,6 +94,7 @@ public class OrderService {
     private final RefundService refundService;
     private final RiskControlService riskControlService;
     private final OrderStateMachine stateMachine;
+    private final OrderEvaluationMapper evaluationMapper;
 
     /* ==================== 1. 试算 ==================== */
 
@@ -522,6 +527,7 @@ public class OrderService {
 
         Map<String, String> levelLabels = creditService.levelLabelMap();
         result.getRecords().forEach(vo -> fillLabels(vo, levelLabels));
+        fillEvaluationFlags(result.getRecords());
         return PageResult.of(result);
     }
 
@@ -561,6 +567,14 @@ public class OrderService {
         vo.setItems(orderItemMapper.selectItemVO(orderId));
         vo.setPayments(paymentService.listByOrder(orderId));
         vo.setRefunds(refundService.listByOrder(orderId));
+
+        // 评价标记与内容：详情页据此决定显示「发表评价」按钮还是已评价内容
+        // canEvaluate 用 countByOrderId（含已删除），避免违规评价被删后按钮又冒出来、点了却报错
+        EvaluationVO eval = evaluationMapper.selectEvalByOrderId(orderId);
+        vo.setEvaluated(evaluationMapper.countByOrderId(orderId) > 0);
+        vo.setCanEvaluate(OrderStatus.COMPLETED.name().equals(vo.getStatus())
+                && Boolean.FALSE.equals(vo.getEvaluated()));
+        vo.setEvaluation(eval);
 
         // 违约金只在归还结算那一刻产生。未结算的订单给一个按当前规则算出的"预估"，
         // 避免把库里可能存在的历史值或 0 当成实际扣款展示（预估也会随天数增长）
@@ -887,6 +901,32 @@ public class OrderService {
         vo.setCanConfirmReturn(status == OrderStatus.WAIT_RETURN || status == OrderStatus.OVERDUE);
         String level = vo.getCreditLevelSnapshot();
         vo.setCreditLevelLabel(levelLabels.getOrDefault(level, level));
+    }
+
+    /**
+     * 批量标记「可评价 / 已评价」
+     *
+     * <p>列表页只对已完成订单查一次评价表（IN 一批 orderId），
+     * 而不是每条订单查一次——30 条一页就是 30 次往返。</p>
+     */
+    private void fillEvaluationFlags(List<OrderListVO> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        List<Long> completedIds = list.stream()
+                .filter(vo -> OrderStatus.COMPLETED.name().equals(vo.getStatus()))
+                .map(OrderListVO::getId)
+                .toList();
+        Set<Long> evaluatedIds = completedIds.isEmpty()
+                ? Set.of()
+                : new HashSet<>(evaluationMapper.selectEvaluatedOrderIds(completedIds));
+
+        for (OrderListVO vo : list) {
+            boolean completed = OrderStatus.COMPLETED.name().equals(vo.getStatus());
+            boolean evaluated = evaluatedIds.contains(vo.getId());
+            vo.setEvaluated(evaluated);
+            vo.setCanEvaluate(completed && !evaluated);
+        }
     }
 
     private PaymentVO toPaymentVO(PaymentRecord record) {

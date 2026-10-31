@@ -486,10 +486,12 @@ CREATE TABLE order_evaluation (
   order_id    BIGINT UNSIGNED NOT NULL COMMENT '订单ID',
   user_id     BIGINT UNSIGNED NOT NULL COMMENT '评价人',
   vehicle_id  BIGINT UNSIGNED NOT NULL COMMENT '车辆ID',
-  rating      TINYINT      NOT NULL DEFAULT 5 COMMENT '评分 1-5',
+  rating         TINYINT   NOT NULL DEFAULT 5 COMMENT '综合评分 1-5，车辆与门店两项平均后四舍五入',
+  vehicle_rating TINYINT   NOT NULL DEFAULT 5 COMMENT '车辆状况评分 1-5',
+  store_rating   TINYINT   NOT NULL DEFAULT 5 COMMENT '门店服务评分 1-5',
   content     VARCHAR(500) NOT NULL COMMENT '评价内容',
   images      TEXT         DEFAULT NULL COMMENT '图片 JSON 数组',
-  reply       VARCHAR(200) DEFAULT NULL COMMENT '平台/网点回复',
+  reply       VARCHAR(200) DEFAULT NULL COMMENT '商家（网点）解释性回复',
   reply_time  DATETIME     DEFAULT NULL COMMENT '回复时间',
   status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态 1显示 0隐藏',
   create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '评价时间',
@@ -726,6 +728,7 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, perm
 (102, 10,  '网点车辆',   'C', '/store/vehicles',     'store/VehicleManage',   'store:vehicle',       'Van',        2, 1, 1),
 (103, 10,  '网点订单',   'C', '/store/orders',       'store/OrderManage',     'store:order',         'Tickets',    3, 1, 1),
 (104, 10,  '调车申请',   'C', '/store/dispatch',     'store/DispatchApply',   'dispatch:apply',      'Switch',     4, 1, 1),
+(105, 10,  '客户评价',   'C', '/store/evaluations',  'store/EvaluationReply', 'evaluation:reply',    'ChatLineSquare', 5, 1, 1),
 (20,  0,   '平台管理',   'M', '/admin',              NULL,                    NULL,                  'Setting',    20, 1, 1),
 (201, 20,  '数据看板',   'C', '/admin/dashboard',    'admin/Dashboard',       'dashboard:view',      'DataAnalysis', 1, 1, 1),
 (212, 20,  '智能分析',   'C', '/admin/analytics',    'admin/Analytics',       'analytics:view',      'TrendCharts', 2, 1, 1),
@@ -758,11 +761,12 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, perm
 UPDATE sys_menu SET sort_no = sort_no + 1 WHERE parent_id = 20 AND id BETWEEN 202 AND 211;
 
 -- 4) 角色菜单授权：管理员全量，用户只看前台，网点管理员看首页+订单+网点管理
+--    网点管理员能进「客户评价」只能回复，删除接口在后端限定 SYS_ADMIN
 INSERT INTO sys_role_menu (role_id, menu_id) SELECT 3, id FROM sys_menu;
 INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT 1, id FROM sys_menu WHERE id IN (1, 2, 21, 22, 3, 4, 5, 6);
 INSERT INTO sys_role_menu (role_id, menu_id)
-SELECT 2, id FROM sys_menu WHERE id IN (1, 3, 10, 101, 102, 103, 104);
+SELECT 2, id FROM sys_menu WHERE id IN (1, 3, 10, 101, 102, 103, 104, 105);
 
 -- 5) 数据字典：订单状态机、车型分类、变速箱、能源、支付方式、信用等级、调度状态、申诉状态
 INSERT INTO sys_dict_data (dict_type, dict_code, dict_label, dict_value, sort_no, remark) VALUES

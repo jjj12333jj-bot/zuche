@@ -156,6 +156,81 @@
           <span>手续：齐全</span>
         </div>
       </section>
+
+      <section class="card eval-card">
+        <h3 class="card-title">
+          用户评价
+          <span v-if="evaluations.total" class="title-note">共 {{ evaluations.total }} 条</span>
+        </h3>
+
+        <template v-if="evaluations.total">
+          <div class="eval-summary">
+            <div class="score-block">
+              <div class="score-big">{{ avgText(evaluations.avgRating) }}<i>/5</i></div>
+              <el-rate :model-value="Number(evaluations.avgRating) || 0" disabled size="small" />
+              <div class="score-sub">{{ evaluations.total }} 位租客评价</div>
+            </div>
+
+            <div class="dim-block">
+              <div class="dim-row">
+                <span>车辆状况</span>
+                <b>{{ avgText(evaluations.avgVehicleRating) }}</b>
+              </div>
+              <div class="dim-row">
+                <span>门店服务</span>
+                <b>{{ avgText(evaluations.avgStoreRating) }}</b>
+              </div>
+              <p class="dim-tip">车况与服务分开统计，避免一个好一个差被平均成一个"还行"</p>
+            </div>
+
+            <div class="dist-block">
+              <div v-for="s in [5, 4, 3, 2, 1]" :key="s" class="dist-row">
+                <span class="dist-label">{{ s }} 星</span>
+                <div class="dist-bar"><i :style="{ width: starPct(s) }" /></div>
+                <span class="dist-count">{{ starCount(s) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="eval-list">
+            <div v-for="item in evaluations.records" :key="item.id" class="eval-item">
+              <div class="item-head">
+                <span class="item-avatar">{{ (item.customerName || '匿').slice(0, 1) }}</span>
+                <div class="item-user">
+                  <div class="item-name">{{ item.customerName || '匿名用户' }}</div>
+                  <div class="item-meta">{{ formatDate(item.createTime) }}</div>
+                </div>
+                <el-rate :model-value="item.rating" disabled size="small" />
+              </div>
+              <div class="item-dims">
+                <span>车况 {{ item.vehicleRating }}.0</span>
+                <span>服务 {{ item.storeRating }}.0</span>
+              </div>
+              <p class="item-content">{{ item.content }}</p>
+              <div v-if="item.images && item.images.length" class="item-images">
+                <el-image
+                  v-for="(img, i) in item.images"
+                  :key="i"
+                  :src="resolveImage(img)"
+                  :preview-src-list="item.images.map(resolveImage)"
+                  :initial-index="i"
+                  fit="cover"
+                  class="item-thumb"
+                />
+              </div>
+              <div v-if="item.reply" class="item-reply">
+                <span class="item-reply-tag">商家回复</span>{{ item.reply }}
+              </div>
+            </div>
+          </div>
+
+          <div v-if="evaluations.records.length < evaluations.total" class="eval-more">
+            <el-button :loading="evalLoading" @click="loadMoreEvaluations">查看更多评价</el-button>
+          </div>
+        </template>
+
+        <el-empty v-else description="这台车还没有用户评价" :image-size="72" />
+      </section>
     </div>
 
     <div v-else-if="!loading" class="empty-wrap">
@@ -170,9 +245,10 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getVehicleDetail } from '@/api/vehicle'
+import { getVehicleDetail, getVehicleEvaluations } from '@/api/vehicle'
 import { useUserStore } from '@/store/user'
 import { resolveImage, onImageError } from '@/utils/image'
+import { formatDate } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -231,8 +307,7 @@ async function loadDetail() {
   }
 }
 
-function onRent() {
-  if (!userStore.isLogin) {
+function onRent() {  if (!userStore.isLogin) {
     ElMessage.info('请先登录，登录后可查看专属押金')
     router.push({ path: '/login', query: { redirect: route.fullPath } })
     return
@@ -244,8 +319,83 @@ function onRent() {
   router.push(`/checkout/${detail.value.id}`)
 }
 
-onMounted(loadDetail)
-watch(() => route.params.id, loadDetail)
+/* ==================== 用户评价 ==================== */
+
+const EVAL_PAGE_SIZE = 5
+const evalLoading = ref(false)
+const evaluations = ref({
+  total: 0,
+  avgRating: 0,
+  avgVehicleRating: 0,
+  avgStoreRating: 0,
+  star1: 0,
+  star2: 0,
+  star3: 0,
+  star4: 0,
+  star5: 0,
+  records: [],
+  page: 1,
+  size: EVAL_PAGE_SIZE
+})
+
+const STAR_FIELD = { 5: 'star5', 4: 'star4', 3: 'star3', 2: 'star2', 1: 'star1' }
+
+function starCount(star) {
+  return Number(evaluations.value[STAR_FIELD[star]] || 0)
+}
+
+function starPct(star) {
+  const total = Number(evaluations.value.total || 0)
+  if (!total) return '0%'
+  return `${Math.round((starCount(star) / total) * 100)}%`
+}
+
+function avgText(value) {
+  const n = Number(value || 0)
+  return n ? n.toFixed(1) : '—'
+}
+
+async function loadEvaluations(pageNo = 1) {
+  const id = route.params.id
+  if (!id) return
+  evalLoading.value = true
+  try {
+    const res = await getVehicleEvaluations(id, { page: pageNo, size: EVAL_PAGE_SIZE })
+    const data = res.data || {}
+    const incoming = data.records || []
+    evaluations.value =
+      pageNo === 1
+        ? { ...evaluations.value, ...data, records: incoming }
+        : {
+            ...evaluations.value,
+            ...data,
+            records: [...evaluations.value.records, ...incoming]
+          }
+  } catch (e) {
+    // 评价是附加信息，接口挂了也不该让整页报错，给空态即可
+    if (pageNo === 1) {
+      evaluations.value = { ...evaluations.value, total: 0, records: [] }
+    }
+  } finally {
+    evalLoading.value = false
+  }
+}
+
+function loadMoreEvaluations() {
+  loadEvaluations(Number(evaluations.value.page || 1) + 1)
+}
+
+onMounted(() => {
+  loadDetail()
+  loadEvaluations(1)
+})
+watch(
+  () => route.params.id,
+  () => {
+    loadDetail()
+    loadEvaluations(1)
+  }
+)
 </script>
 
 <style scoped>
@@ -555,6 +705,233 @@ watch(() => route.params.id, loadDetail)
   }
   .booking {
     position: static;
+  }
+}
+
+/* ==================== 用户评价 ==================== */
+
+.title-note {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #a8abb2;
+}
+
+.eval-summary {
+  display: grid;
+  grid-template-columns: 180px 1fr 260px;
+  gap: 24px;
+  padding: 16px 0 20px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.score-block {
+  text-align: center;
+}
+
+.score-big {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: #e6a23c;
+}
+
+.score-big i {
+  font-size: 15px;
+  font-style: normal;
+  color: #a8abb2;
+}
+
+.score-block .el-rate {
+  margin-top: 8px;
+}
+
+.score-sub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #a8abb2;
+}
+
+.dim-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.dim-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 220px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.dim-row b {
+  font-size: 15px;
+  color: #e6a23c;
+}
+
+.dim-tip {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #a8abb2;
+}
+
+.dist-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.dist-label {
+  width: 32px;
+}
+
+.dist-bar {
+  flex: 1;
+  height: 7px;
+  background: #f0f2f5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dist-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f7ba2a, #e6a23c);
+  border-radius: 4px;
+}
+
+.dist-count {
+  width: 24px;
+  text-align: right;
+}
+
+.eval-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.eval-item {
+  padding: 18px 0;
+  border-bottom: 1px solid #f5f7fa;
+}
+
+.eval-item:last-child {
+  border-bottom: none;
+}
+
+.item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ecf5ff;
+  color: #409eff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.item-user {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name {
+  font-size: 14px;
+  color: #303133;
+}
+
+.item-meta {
+  font-size: 12px;
+  color: #a8abb2;
+}
+
+.item-dims {
+  display: flex;
+  gap: 14px;
+  margin: 10px 0 6px 44px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.item-content {
+  margin: 0 0 0 44px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #303133;
+  white-space: pre-wrap;
+}
+
+.item-images {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 0 44px;
+}
+
+.item-thumb {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+}
+
+.item-reply {
+  margin: 12px 0 0 44px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #606266;
+}
+
+.item-reply-tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: #409eff;
+  border: 1px solid #d9ecff;
+  background: #ecf5ff;
+  border-radius: 4px;
+}
+
+.eval-more {
+  padding-top: 16px;
+  text-align: center;
+}
+
+@media (max-width: 960px) {
+  .eval-summary {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .item-dims,
+  .item-content,
+  .item-images,
+  .item-reply {
+    margin-left: 0;
   }
 }
 </style>

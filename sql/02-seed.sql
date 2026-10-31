@@ -581,15 +581,26 @@ FROM vehicle v WHERE v.id = 18;
 -- ---------------------------------------------------------------------
 -- 7. 订单评价（取最近 12 条已完成订单，一单一评）
 -- ---------------------------------------------------------------------
-INSERT INTO order_evaluation (order_id, user_id, vehicle_id, rating, content, reply, reply_time, status, create_time)
+-- 双维度评分：车辆状况与门店服务分开打，四种组合各写一条针对性文案，
+-- 后台与前台都能一眼看出"车好服务差"和"车旧服务好"的区别。
+-- 综合分 rating 取两项平均，继续给统计和排序用，旧口径不变。
+INSERT INTO order_evaluation (order_id, user_id, vehicle_id,
+                              rating, vehicle_rating, store_rating,
+                              content, reply, reply_time, status, create_time)
 SELECT o.id, o.user_id, MIN(oi.vehicle_id),
+       -- FLOOR(x+0.5) 而不是 ROUND：ELT 返回字符串，算术上下文里是 DOUBLE，
+       -- MySQL 对 DOUBLE 的 ROUND 是「四舍六入五成双」，4.5 会变 4，与 Java Math.round 不一致
+       -- 四种组合：(5,5)=5 星、(4,3)=4 星、(5,2)=4 星、(3,3)=3 星
+       -- 让车况均分高于服务均分，页面上一眼能看出"车还行，服务拖后腿"
+       FLOOR((ELT(1 + (o.id % 4), 5, 4, 5, 3) + ELT(1 + (o.id % 4), 5, 3, 2, 3)) / 2 + 0.5),
        ELT(1 + (o.id % 4), 5, 4, 5, 3),
+       ELT(1 + (o.id % 4), 5, 3, 2, 3),
        ELT(1 + (o.id % 4),
-           '车况很新，取车流程 5 分钟搞定，信用分抵扣后押金便宜不少。',
-           '整体不错，就是内饰有点旧，性价比可以。',
-           '还车检查很快，押金当天到账，会再租。',
-           '取车时等了一会儿，车本身没问题。'),
-       IF(o.id % 3 = 0, '感谢评价，欢迎再次选择本网点。', NULL),
+           '车况很新，取车流程 5 分钟搞定，店员还主动讲解了保险理赔流程。',
+           '整体不错，就是内饰有点旧，座椅有磨损，性价比还可以。',
+           '车本身很新很好开，但取车时等了快四十分钟，店员也没给个解释。',
+           '车有点旧，内饰也有异味，店员全程没怎么搭理人，不太推荐。'),
+       IF(o.id % 3 = 0, '感谢您的反馈，取车等待的问题我们已加强排班，欢迎再次光临。', NULL),
        IF(o.id % 3 = 0, DATE_ADD(o.finish_time, INTERVAL 1 DAY), NULL),
        1, DATE_ADD(o.finish_time, INTERVAL 6 HOUR)
 FROM lease_order o

@@ -38,8 +38,56 @@
               <el-button v-if="detail.canPay" type="primary" @click="router.push(`/cashier/${detail.id}`)">
                 去支付 ¥{{ formatMoney(detail.totalAmount) }}
               </el-button>
+              <el-button
+                v-if="detail.canEvaluate"
+                type="warning"
+                :loading="evalSubmitting"
+                @click="openEvaluate"
+              >
+                发表评价
+              </el-button>
             </div>
           </div>
+
+          <section v-if="detail.evaluation" class="card eval-mine">
+            <h3 class="card-title">
+              我的评价
+              <span class="title-note">{{ formatDateTime(detail.evaluation.createTime) }}</span>
+            </h3>
+            <div class="eval-head">
+              <div class="eval-dim">
+                <span class="dim-name">车辆状况</span>
+                <el-rate :model-value="detail.evaluation.vehicleRating" disabled size="small" />
+                <b class="dim-score">{{ detail.evaluation.vehicleRating }}.0</b>
+              </div>
+              <div class="eval-dim">
+                <span class="dim-name">门店服务</span>
+                <el-rate :model-value="detail.evaluation.storeRating" disabled size="small" />
+                <b class="dim-score">{{ detail.evaluation.storeRating }}.0</b>
+              </div>
+              <div class="eval-dim total">
+                <span class="dim-name">综合</span>
+                <b class="dim-score">{{ detail.evaluation.rating }}.0</b>
+                <span class="dim-label">{{ detail.evaluation.ratingLabel }}</span>
+              </div>
+            </div>
+            <p class="eval-content">{{ detail.evaluation.content }}</p>
+            <div v-if="detail.evaluation.images && detail.evaluation.images.length" class="eval-images">
+              <el-image
+                v-for="(img, i) in detail.evaluation.images"
+                :key="i"
+                :src="resolveImage(img)"
+                :preview-src-list="detail.evaluation.images.map(resolveImage)"
+                :initial-index="i"
+                fit="cover"
+                class="eval-thumb"
+              />
+            </div>
+            <div v-if="detail.evaluation.reply" class="eval-reply">
+              <span class="reply-tag">商家回复</span>
+              <span>{{ detail.evaluation.reply }}</span>
+            </div>
+          </section>
 
           <div class="info-grid">
             <div class="card">
@@ -217,6 +265,45 @@
         </el-empty>
       </div>
     </div>
+
+    <el-dialog
+      v-model="evalVisible"
+      title="发表评价"
+      width="520px"
+      :close-on-click-modal="false"
+      @closed="resetEvalForm"
+    >
+      <div class="eval-form">
+        <p class="eval-tip">
+          车况和服务分开打分：车的问题归车，人的问题归人，商家才知道该去整备车辆还是该培训店员。
+        </p>
+        <div class="eval-row">
+          <span class="eval-label">车辆状况</span>
+          <el-rate v-model="evalForm.vehicleRating" :texts="RATE_TEXTS" show-text />
+        </div>
+        <div class="eval-row">
+          <span class="eval-label">门店服务</span>
+          <el-rate v-model="evalForm.storeRating" :texts="RATE_TEXTS" show-text />
+        </div>
+        <div class="eval-field">
+          <span class="eval-label">评价内容</span>
+          <el-input
+            v-model="evalForm.content"
+            type="textarea"
+            :rows="4"
+            maxlength="500"
+            show-word-limit
+            placeholder="说说车况、取还车流程、店员服务……至少 5 个字"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="evalVisible = false">取消</el-button>
+        <el-button type="primary" :loading="evalSubmitting" @click="onSubmitEvaluation">
+          提交评价
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -229,9 +316,11 @@ import {
   cancelOrder,
   confirmReturnOrder,
   getOrderDetail,
-  pickupOrder
+  pickupOrder,
+  submitEvaluation
 } from '@/api/order'
 import { useUserStore } from '@/store/user'
+import { resolveImage } from '@/utils/image'
 import { CREDIT_LEVELS, formatDate, formatDateTime, formatMoney, ORDER_STATUS_TAG } from '@/utils/format'
 
 const route = useRoute()
@@ -241,6 +330,47 @@ const userStore = useUserStore()
 const detail = ref(null)
 const loading = ref(false)
 const busy = ref(false)
+
+/* ==================== 评价 ==================== */
+
+const RATE_TEXTS = ['很不满意', '不满意', '一般', '满意', '非常满意']
+const evalVisible = ref(false)
+const evalSubmitting = ref(false)
+const evalForm = ref({ vehicleRating: 5, storeRating: 5, content: '' })
+
+function openEvaluate() {
+  resetEvalForm()
+  evalVisible.value = true
+}
+
+function resetEvalForm() {
+  evalForm.value = { vehicleRating: 5, storeRating: 5, content: '' }
+}
+
+async function onSubmitEvaluation() {
+  const { vehicleRating, storeRating, content } = evalForm.value
+  if (!vehicleRating || !storeRating) {
+    ElMessage.warning('请为车辆状况和门店服务都打个分')
+    return
+  }
+  if (!content || content.trim().length < 5) {
+    ElMessage.warning('评价内容至少 5 个字')
+    return
+  }
+  evalSubmitting.value = true
+  try {
+    const res = await submitEvaluation(detail.value.id, {
+      vehicleRating,
+      storeRating,
+      content: content.trim()
+    })
+    ElMessage.success(res.message || '评价已提交')
+    evalVisible.value = false
+    await load()
+  } finally {
+    evalSubmitting.value = false
+  }
+}
 
 const DEPOSIT_REFUND_LABEL = {
   NONE: '未退还',
@@ -527,5 +657,121 @@ onMounted(load)
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ==================== 评价 ==================== */
+
+.eval-mine .card-title {
+  display: flex;
+  align-items: baseline;
+}
+
+.eval-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed #ebeef5;
+}
+
+.eval-dim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eval-dim.total {
+  padding-left: 22px;
+  border-left: 1px solid #ebeef5;
+}
+
+.dim-name {
+  font-size: 13px;
+  color: #909399;
+}
+
+.dim-score {
+  font-size: 15px;
+  color: #e6a23c;
+}
+
+.dim-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.eval-content {
+  margin: 14px 0 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #303133;
+  white-space: pre-wrap;
+}
+
+.eval-images {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.eval-thumb {
+  width: 84px;
+  height: 84px;
+  border-radius: 8px;
+  border: 1px solid #ebeef5;
+}
+
+.eval-reply {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #606266;
+}
+
+.reply-tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: #409eff;
+  border: 1px solid #d9ecff;
+  background: #ecf5ff;
+  border-radius: 4px;
+}
+
+.eval-tip {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #909399;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.eval-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.eval-field {
+  margin-top: 4px;
+}
+
+.eval-label {
+  display: inline-block;
+  width: 72px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.eval-field .eval-label {
+  vertical-align: top;
+  margin-bottom: 8px;
 }
 </style>

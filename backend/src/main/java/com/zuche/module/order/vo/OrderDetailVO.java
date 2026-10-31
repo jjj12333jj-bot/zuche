@@ -62,4 +62,7 @@ public class OrderDetailVO extends OrderListVO {
 
     @Schema(description = "退款流水")
     private List<com.zuche.module.refund.vo.RefundVO> refunds;
+
+    @Schema(description = "本人对这笔订单的评价，未评价为 null")
+    private EvaluationVO evaluation;
 }

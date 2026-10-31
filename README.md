@@ -257,15 +257,16 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/orders/<orderId
 | `/admin/orders` | 订单：全平台 300 笔，关闭仅限未取车，已支付自动退款 |
 | `/admin/users` | 用户：9 个账号，冻结当场失效，调分必填原因并落信用日志 |
 | `/admin/stores` | 网点：4 个，能停用不轻易删（有车或有单即拦） |
-| `/admin/evaluations` | 评价：12 条 4.25 分，只隐藏不删除，支持图片预览与覆盖式回复 |
+| `/admin/evaluations` | 评价：12 条，车况 4.25 / 服务 3.75 双维度均分，隐藏与删除两级处置 |
 | `/admin/announcements` | 公告：7 条（5 发布 / 2 草稿），草稿→发布两态，发布时间不被编辑覆盖 |
 | `/admin/banners` | 轮播图：3 张，排序号自动排末尾，图片地址只收 `/` 或 http(s) |
 | `/admin/logs` | 操作日志：AOP 自动留痕，失败行标红，参数脱敏+截断 2000 字 |
 | `/store/overview` | 网点管理员只看到网点管理菜单 |
+| `/store/evaluations` | 客户评价：仅本网点，只能解释性回复，没有删除权 |
 | `/checkout/1` | 下单页：选租期/归还网点/备注，右侧实时试算与信用减免 |
 | `/cashier/<orderId>` | 收银台：金额、支付方式、信用快照，支付后展示两条流水 |
 | `/orders` | 我的订单：状态页签、去支付/取消/查看详情 |
-| `/orders/<id>` | 订单详情：明细表 + 支付流水表 + 信用快照 |
+| `/orders/<id>` | 订单详情：明细 + 流水 + 信用快照；完成后可「发表评价」（车况 / 服务双打分） |
 
 ---
 

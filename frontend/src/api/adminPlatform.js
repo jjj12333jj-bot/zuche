@@ -43,6 +43,14 @@ export function updateEvaluationStatus(id, data) {
   return request.put(`/admin/evaluations/${id}/status`, data)
 }
 
+/**
+ * 删除违规评价（仅系统管理员）：{ reason } 会写进操作日志
+ * 逻辑删除，前台与列表都不再出现；普通差评请用隐藏
+ */
+export function deleteEvaluation(id, data) {
+  return request.delete(`/admin/evaluations/${id}`, { params: { reason: data?.reason } })
+}
+
 /* ==================== 用户管理 ==================== */
 
 export function getUserStats() {

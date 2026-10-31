@@ -15,8 +15,14 @@ public class EvaluationStatsVO {
 
     private Integer total;
 
-    @Schema(description = "平均分，保留两位")
+    @Schema(description = "综合平均分，保留两位")
     private Double avgRating;
+
+    @Schema(description = "车辆状况平均分，保留两位")
+    private Double avgVehicleRating;
+
+    @Schema(description = "门店服务平均分，保留两位")
+    private Double avgStoreRating;
 
     @Schema(description = "5 星数")
     private Integer fiveStar;

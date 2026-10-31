@@ -13,6 +13,13 @@
                 typeHandler="com.zuche.common.handler.JsonStringListTypeHandler"/>
     </resultMap>
 
+    <!-- 前台条目同样要解析 images -->
+    <resultMap id="FrontEvalMap" type="com.zuche.module.order.vo.VehicleEvaluationItemVO" autoMapping="true">
+        <id property="id" column="id"/>
+        <result property="images" column="images"
+                typeHandler="com.zuche.common.handler.JsonStringListTypeHandler"/>
+    </resultMap>
+
     <!--
       评价要能独立看懂：谁、在哪个网点、租了哪台车、打几分、说了什么。
       因此四张表一次 JOIN 完，不留给前端再补齐（前端拿不到用户手机号）。
@@ -32,6 +39,8 @@
         CONCAT(COALESCE(b.brand_name, ''), ' ', COALESCE(m.model_name, '')) AS vehicle_name,
         v.license_plate,
         e.rating,
+        e.vehicle_rating,
+        e.store_rating,
         e.content,
         e.images,
         e.reply,
@@ -55,6 +64,9 @@
         <include refid="EvalColumns"/>
         <include refid="EvalJoins"/>
         WHERE e.deleted = 0
+        <if test="q.storeId != null">
+            AND o.store_id = #{q.storeId}
+        </if>
         <if test="q.rating != null">
             AND e.rating = #{q.rating}
         </if>
@@ -82,17 +94,93 @@
         WHERE e.id = #{id} AND e.deleted = 0
     </select>
 
+    <select id="selectEvalByOrderId" resultMap="EvalMap">
+        SELECT
+        <include refid="EvalColumns"/>
+        <include refid="EvalJoins"/>
+        WHERE e.order_id = #{orderId} AND e.deleted = 0
+        LIMIT 1
+    </select>
+
     <select id="selectStats" resultType="com.zuche.module.order.vo.EvaluationStatsVO">
         SELECT
             COUNT(*)                                                    AS total,
             ROUND(COALESCE(AVG(e.rating), 0), 2)                        AS avg_rating,
+            ROUND(COALESCE(AVG(e.vehicle_rating), 0), 2)                AS avg_vehicle_rating,
+            ROUND(COALESCE(AVG(e.store_rating), 0), 2)                  AS avg_store_rating,
             COALESCE(SUM(e.rating = 5), 0)                              AS five_star,
             COALESCE(SUM(e.rating = 4), 0)                              AS four_star,
             COALESCE(SUM(e.rating &lt;= 3), 0)                            AS low_star,
             COALESCE(SUM(e.reply IS NOT NULL AND e.reply &lt;&gt; ''), 0)  AS replied,
             COALESCE(SUM(e.reply IS NULL OR e.reply = ''), 0)           AS unreplied
         FROM order_evaluation e
+        LEFT JOIN lease_order o ON o.id = e.order_id
         WHERE e.deleted = 0
+        <if test="storeId != null">
+            AND o.store_id = #{storeId}
+        </if>
+    </select>
+
+    <!--
+      前台评价：只给展示中的（status=1 且未删除），评价人姓名脱敏成「张**」。
+      手机号、订单号、网点内部信息一概不出现在这个结果集里。
+    -->
+    <select id="selectVehicleEvalPage" resultMap="FrontEvalMap">
+        SELECT
+            e.id,
+            CONCAT(
+                LEFT(COALESCE(NULLIF(u.real_name, ''), u.username, '匿名用户'), 1),
+                '**'
+            )                                   AS customer_name,
+            e.rating,
+            e.vehicle_rating,
+            e.store_rating,
+            e.content,
+            e.images,
+            e.reply,
+            e.reply_time,
+            e.create_time
+        FROM order_evaluation e
+        LEFT JOIN sys_user u ON u.id = e.user_id AND u.deleted = 0
+        WHERE e.vehicle_id = #{vehicleId}
+          AND e.deleted = 0
+          AND e.status = 1
+        ORDER BY e.create_time DESC, e.id DESC
+    </select>
+
+    <select id="selectVehicleSummary" resultType="com.zuche.module.order.vo.VehicleEvaluationVO">
+        SELECT
+            ROUND(COALESCE(AVG(e.rating), 0), 1)            AS avg_rating,
+            ROUND(COALESCE(AVG(e.vehicle_rating), 0), 1)    AS avg_vehicle_rating,
+            ROUND(COALESCE(AVG(e.store_rating), 0), 1)      AS avg_store_rating,
+            COUNT(*)                                        AS total,
+            COALESCE(SUM(e.rating = 5), 0)                  AS star5,
+            COALESCE(SUM(e.rating = 4), 0)                  AS star4,
+            COALESCE(SUM(e.rating = 3), 0)                  AS star3,
+            COALESCE(SUM(e.rating = 2), 0)                  AS star2,
+            COALESCE(SUM(e.rating = 1), 0)                  AS star1
+        FROM order_evaluation e
+        WHERE e.vehicle_id = #{vehicleId}
+          AND e.deleted = 0
+          AND e.status = 1
+    </select>
+
+    <!--
+      判断"这单评过没有"必须包含已删除的评价：
+      违规评价被平台删掉后，唯一索引 uk_order 仍占着 order_id，
+      用户再点提交只会撞库报错，不如一开始就不给按钮。
+    -->
+    <select id="countByOrderId" resultType="int">
+        SELECT COUNT(*) FROM order_evaluation WHERE order_id = #{orderId}
+    </select>
+
+    <select id="selectEvaluatedOrderIds" resultType="java.lang.Long">
+        SELECT DISTINCT e.order_id
+        FROM order_evaluation e
+        WHERE e.order_id IN
+        <foreach collection="orderIds" item="oid" open="(" separator="," close=")">
+            #{oid}
+        </foreach>
     </select>
 
 </mapper>

@@ -75,4 +75,10 @@ public class OrderListVO {
 
     @Schema(description = "是否可确认归还（仅待归还）")
     private Boolean canConfirmReturn;
+
+    @Schema(description = "是否可评价（已完成且尚未评价）")
+    private Boolean canEvaluate;
+
+    @Schema(description = "是否已评价")
+    private Boolean evaluated;
 }

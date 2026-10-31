@@ -24,4 +24,11 @@ public class EvaluationQueryDTO extends PageQuery {
 
     @Schema(description = "订单号 / 用户名 / 姓名 / 评价内容，模糊匹配")
     private String keyword;
+
+    /**
+     * 网点过滤：只由服务端在网点端接口里强制赋值，不接受前端传参
+     * （若能传，等于把"看别家网点评价"做成了一个参数）
+     */
+    @Schema(hidden = true)
+    private Long storeId;
 }

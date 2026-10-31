@@ -14,3 +14,8 @@ export function getVehicleDetail(id) {
 export function getVehicleOptions() {
   return request.get('/vehicles/options')
 }
+
+/** 车辆用户评价：返回平均分、双维度均分、星级分布与评价列表（公开接口） */
+export function getVehicleEvaluations(id, params) {
+  return request.get(`/vehicles/${id}/evaluations`, { params })
+}
