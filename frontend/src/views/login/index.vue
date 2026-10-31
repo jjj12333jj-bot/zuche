@@ -23,20 +23,6 @@
         <h2>账号登录</h2>
         <p class="text-muted">请使用平台分配的账号登录，不同角色进入不同工作台</p>
 
-        <el-alert
-          v-if="switching"
-          class="switch-tip"
-          type="warning"
-          :closable="false"
-          show-icon
-          title="正在为当前标签页登录新账号"
-          description="原标签页的登录状态保持不变，两个标签页可以分别使用不同账号。"
-        />
-        <p v-else class="session-hint">
-          <el-icon><InfoFilled /></el-icon>
-          <span>登录状态只作用于当前标签页：需要同时用多个账号时，再开一个标签页登录即可，互不覆盖。</span>
-        </p>
-
         <el-form
           ref="formRef"
           :model="form"
@@ -86,7 +72,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
@@ -94,9 +80,6 @@ import { useUserStore } from '@/store/user'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-
-/** 从「新标签页登录其他账号」进来时，路由守卫已清掉继承来的身份，这里只做文案区分 */
-const switching = computed(() => route.query.switch === '1')
 
 const formRef = ref(null)
 const loading = ref(false)
@@ -239,40 +222,6 @@ async function onSubmit() {
 .form-side p {
   margin: 0 0 22px;
   font-size: 13px;
-}
-
-/* 标签页会话提示：比正文弱一档，不抢「登录」按钮的注意力 */
-.form-side .session-hint {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin: -8px 0 18px;
-  padding: 9px 11px;
-  border-radius: 6px;
-  background: #f4f7fb;
-  color: #6b7a90;
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-.form-side .session-hint .el-icon {
-  margin-top: 2px;
-  flex-shrink: 0;
-  color: #7f93ad;
-}
-
-.switch-tip {
-  margin: -6px 0 16px;
-}
-
-.switch-tip :deep(.el-alert__title) {
-  font-size: 13px;
-}
-
-.switch-tip :deep(.el-alert__description) {
-  margin: 4px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
 }
 
 .submit-btn {
