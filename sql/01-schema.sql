@@ -21,6 +21,10 @@
 --    五、信用风控           4 张     六、运营与系统审计     4 张
 -- =====================================================================
 
+-- ⚠️ 危险：下面这行会 DROP 整个 zuche 库，库中现有数据全部丢失。
+--    仅在「从零重建」时执行本脚本。若只想验证脚本能否跑通，请复制一份到临时文件，
+--    把 DROP DATABASE / CREATE DATABASE / USE 三行都改成临时库名后再跑，
+--    不要只改 USE —— 只改 USE 会删掉正式库却把表建到别处。
 DROP DATABASE IF EXISTS zuche;
 CREATE DATABASE zuche DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE zuche;
