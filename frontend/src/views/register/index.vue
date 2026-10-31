@@ -3,7 +3,7 @@
     <div class="register-card">
       <aside class="brand">
         <div class="brand-logo">
-          <el-icon :size="26"><Van /></el-icon>
+          <BrandMark :size="40" variant="light" />
           <span>微租车</span>
         </div>
         <h1>注册即得 100 信用分</h1>
@@ -112,6 +112,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import BrandMark from '@/components/BrandMark.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

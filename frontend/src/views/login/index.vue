@@ -6,9 +6,7 @@
 
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark">
-          <el-icon :size="19"><Van /></el-icon>
-        </span>
+        <BrandMark :size="36" />
         <span class="brand-name">微租车</span>
       </div>
       <div class="topbar-meta">泉州南安店 · 泉州晋江店</div>
@@ -27,7 +25,6 @@
       <!-- 半透明毛玻璃卡片：只保留表单，背景透出来但不影响阅读 -->
       <section class="card">
         <h2>账号登录</h2>
-        <p class="card-sub">请使用平台分配的账号登录，不同角色进入不同工作台</p>
 
         <el-form
           ref="formRef"
@@ -82,6 +79,7 @@ import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/user'
+import BrandMark from '@/components/BrandMark.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -202,17 +200,6 @@ async function onSubmit() {
   gap: 11px;
 }
 
-.brand-mark {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(6px);
-}
-
 .brand-name {
   font-size: 18px;
   font-weight: 600;
@@ -296,18 +283,11 @@ async function onSubmit() {
 }
 
 .card h2 {
-  margin: 0 0 6px;
+  margin: 0 0 26px;
   font-size: 22px;
   font-weight: 650;
   letter-spacing: 0.5px;
   color: #16233a;
-}
-
-.card-sub {
-  margin: 0 0 26px;
-  font-size: 12.5px;
-  line-height: 1.7;
-  color: #64748b;
 }
 
 .card :deep(.el-form-item) {

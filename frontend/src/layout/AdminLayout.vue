@@ -2,7 +2,7 @@
   <el-container class="admin-layout">
     <el-aside :width="isCollapse ? '64px' : '230px'" class="aside">
       <div class="brand" :class="{ mini: isCollapse }">
-        <el-icon :size="24"><Van /></el-icon>
+        <BrandMark :size="34" variant="light" />
         <div v-show="!isCollapse" class="brand-text">
           <b>微租车</b>
           <span>{{ isAdmin ? '系统管理台' : '网点工作台' }}</span>
@@ -98,6 +98,7 @@ import { useUserStore } from '@/store/user'
 import { openLoginInNewTab } from '@/utils/authSession'
 import { filterMenuByPrefix, findMenuTrail } from '@/utils/menu'
 import { resolveImage, DEFAULT_AVATAR } from '@/utils/image'
+import BrandMark from '@/components/BrandMark.vue'
 import SidebarItem from './SidebarItem.vue'
 
 const route = useRoute()

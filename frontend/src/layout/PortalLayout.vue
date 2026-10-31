@@ -3,7 +3,7 @@
     <header class="header">
       <div class="page-container header-inner">
         <div class="logo" @click="router.push('/')">
-          <el-icon :size="22"><Van /></el-icon>
+          <BrandMark :size="32" />
           <span>微租车</span>
         </div>
 
@@ -90,6 +90,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/user'
 import { openLoginInNewTab } from '@/utils/authSession'
 import { resolveImage, DEFAULT_AVATAR } from '@/utils/image'
+import BrandMark from '@/components/BrandMark.vue'
 
 const route = useRoute()
 const router = useRouter()
