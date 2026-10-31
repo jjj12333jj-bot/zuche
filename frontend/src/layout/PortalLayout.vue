@@ -58,7 +58,7 @@
                     {{ userStore.isAdmin ? '系统管理台' : '网点工作台' }}
                   </el-dropdown-item>
                   <el-dropdown-item command="newTab" divided>新标签页登录其他账号</el-dropdown-item>
-                  <el-dropdown-item command="logout">退出本标签页</el-dropdown-item>
+                  <el-dropdown-item command="logout">退出当前账号</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -122,9 +122,11 @@ function goWorkspace() {
 
 function onCommand(command) {
   if (command === 'logout') {
-    ElMessageBox.confirm('只退出当前标签页，其他标签页的登录状态不受影响。确定退出吗？', '提示', {
-      type: 'warning'
-    })
+    ElMessageBox.confirm(
+      `将退出「${userStore.displayName}」账号，仅当前标签页受影响，其他标签页保持登录。`,
+      '退出登录',
+      { type: 'warning' }
+    )
       .then(() => {
         userStore.logout()
         ElMessage.success('已退出登录')

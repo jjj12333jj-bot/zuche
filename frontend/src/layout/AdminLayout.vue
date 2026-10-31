@@ -76,7 +76,7 @@
                 <el-dropdown-item command="portal">前台首页</el-dropdown-item>
                 <el-dropdown-item command="refresh">刷新用户信息</el-dropdown-item>
                 <el-dropdown-item command="newTab" divided>新标签页登录其他账号</el-dropdown-item>
-                <el-dropdown-item command="logout">退出本标签页</el-dropdown-item>
+                <el-dropdown-item command="logout">退出当前账号</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -129,9 +129,11 @@ function onCommand(command) {
       ElMessage.warning('浏览器拦截了新窗口，请手动新建标签页访问 /login')
     }
   } else if (command === 'logout') {
-    ElMessageBox.confirm('只退出当前标签页，其他标签页的登录状态不受影响。确定退出吗？', '提示', {
-      type: 'warning'
-    })
+    ElMessageBox.confirm(
+      `将退出「${userStore.displayName}」账号，仅当前标签页受影响，其他标签页保持登录。`,
+      '退出登录',
+      { type: 'warning' }
+    )
       .then(() => {
         userStore.logout()
         ElMessage.success('已退出登录')
