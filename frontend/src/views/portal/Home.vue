@@ -303,11 +303,11 @@ onUnmounted(() => {
 <style scoped>
 .hero {
   position: relative;
-  background: #12539e;
+  background: #0b2f5c;
 }
 
 .hero-carousel {
-  background: #12539e;
+  background: #0b2f5c;
 }
 
 .slide {
@@ -316,16 +316,39 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* ---------- 第一屏：纯蓝信用说明 ---------- */
+/* ---------- 第一屏：信用说明，蓝调旅行实景图打底 ---------- */
 .slide-credit {
+  position: relative;
   display: flex;
   align-items: center;
   color: #fff;
-  background: #12539e;
+  background-color: #0b2f5c;
+  background-image: url('/images/banners/banner-credit.jpg');
+  background-size: cover;
+  background-position: center 58%;
+  background-repeat: no-repeat;
   padding: 34px 0 44px;
 }
 
+/* 蓝色遮罩：左侧压深保证白字可读，右侧逐渐透出桥与车 */
+.slide-credit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      96deg,
+      rgba(6, 30, 60, 0.93) 0%,
+      rgba(7, 36, 71, 0.85) 30%,
+      rgba(9, 45, 88, 0.58) 58%,
+      rgba(10, 52, 102, 0.28) 100%
+    ),
+    linear-gradient(0deg, rgba(5, 22, 45, 0.46) 0%, transparent 32%);
+}
+
 .hero-inner {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 40px;
@@ -338,14 +361,16 @@ onUnmounted(() => {
   margin: 16px 0 14px;
   font-weight: 600;
   letter-spacing: 1px;
+  text-shadow: 0 4px 22px rgba(2, 14, 30, 0.42);
 }
 
 .hero-text p {
   font-size: 15px;
   line-height: 1.9;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.86);
   max-width: 560px;
   margin: 0 0 28px;
+  text-shadow: 0 2px 12px rgba(2, 14, 30, 0.35);
 }
 
 .hero-actions {
@@ -366,15 +391,17 @@ onUnmounted(() => {
 }
 
 .credit-panel {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(4, 22, 44, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 12px;
   padding: 20px 22px;
+  backdrop-filter: blur(12px) saturate(150%);
+  box-shadow: 0 18px 42px rgba(3, 16, 34, 0.32);
 }
 
 .panel-title {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.78);
   margin-bottom: 14px;
 }
 
@@ -405,7 +432,7 @@ onUnmounted(() => {
 .panel-tip {
   margin-top: 12px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* ---------- 其余屏：旅行实景图 ---------- */
@@ -671,15 +698,24 @@ onUnmounted(() => {
   .slide-photo {
     background-position: 62% center;
   }
+  .slide-credit {
+    background-position: 64% center;
+  }
 }
 
 @media (max-width: 640px) {
   /* 窄屏换竖版裁图，文字压到底部，遮罩也改成从下往上压暗 */
-  .slide-photo {
-    background-image: var(--bg-sm);
+  .slide-photo,
+  .slide-credit {
     background-position: center;
     align-items: flex-end;
     padding-bottom: 46px;
+  }
+  .slide-photo {
+    background-image: var(--bg-sm);
+  }
+  .slide-credit {
+    background-image: url('/images/banners/banner-credit-sm.jpg');
   }
   .photo-scrim {
     background: linear-gradient(
@@ -687,6 +723,14 @@ onUnmounted(() => {
       rgba(6, 14, 28, 0.9) 0%,
       rgba(6, 14, 28, 0.62) 42%,
       rgba(6, 14, 28, 0.12) 82%
+    );
+  }
+  .slide-credit::before {
+    background: linear-gradient(
+      0deg,
+      rgba(5, 22, 45, 0.95) 0%,
+      rgba(6, 30, 60, 0.74) 46%,
+      rgba(9, 45, 88, 0.2) 86%
     );
   }
 }
