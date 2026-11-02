@@ -29,6 +29,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
             "/api/home",
             "/api/categories/**",
             "/api/vehicles/**",
+            "/api/banners/**",
             "/api/announcements/**",
             // 接口文档与静态资源
             "/doc.html",

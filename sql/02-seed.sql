@@ -193,10 +193,9 @@ INSERT INTO announcement (title, content, type, publisher_id, status, view_count
 ('2026 年春节网点营业时间安排', '春节期间（除夕至初六）各网点营业时间调整为 09:00-17:00，泉州南安店、泉州晋江店均正常营业。跨网点还车请提前在订单中备注。', 'NOTICE', 1, 0, 0, NULL),
 ('新能源车型里程限制调整说明', '自下月起，新能源车型单日里程上限由 300 公里调整为 350 公里，超出部分按 0.8 元/公里计费。本条公告待运营确认后发布。', 'RULE', 1, 0, 0, NULL);
 
-INSERT INTO banner (title, image_url, link_url, position, sort_no, status) VALUES
-('信用越好 押金越低',      '/images/banners/banner-1.svg', '/credit',       'HOME', 1, 1),
-('新用户首单立减 50',      '/images/banners/banner-2.svg', '/vehicles',     'HOME', 2, 1),
-('新能源专区 低至 219/天',  '/images/banners/banner-3.svg', '/vehicles?category=EV', 'HOME', 3, 1);
+INSERT INTO banner (title, subtitle, image_url, link_url, position, sort_no, status) VALUES
+('山海之间，一路向南',  'SUV 自驾 · 海岸线随停随走 · 泉州两店取还', '/images/banners/banner-1.jpg', '/vehicles', 'HOME', 1, 1),
+('周末短途，说走就走',  '精选车型 · 信用免押 · 到店即取，两小时上高速', '/images/banners/banner-2.jpg', '/vehicles', 'HOME', 2, 1);
 
 INSERT INTO dispatch_apply (apply_no, vehicle_id, from_store_id, to_store_id, apply_user_id, reason, status, audit_user_id, audit_time, audit_remark, create_time) VALUES
 ('D202610260001', 22, 1, 2, 2, '南安店奥迪Q5L库存富余，晋江店豪华型已租罄', 'PENDING', NULL, NULL, NULL, DATE_SUB(NOW(), INTERVAL 2 DAY)),

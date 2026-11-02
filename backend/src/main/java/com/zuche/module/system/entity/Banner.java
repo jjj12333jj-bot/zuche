@@ -24,6 +24,9 @@ public class Banner {
 
     private String title;
 
+    /** 副标题：前台大图上标题下方的一行说明，选填 */
+    private String subtitle;
+
     private String imageUrl;
 
     private String linkUrl;

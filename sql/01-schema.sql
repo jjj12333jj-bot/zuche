@@ -650,6 +650,7 @@ DROP TABLE IF EXISTS banner;
 CREATE TABLE banner (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
   title       VARCHAR(80)  NOT NULL COMMENT '标题',
+  subtitle    VARCHAR(120) DEFAULT NULL COMMENT '副标题/一句话说明',
   image_url   VARCHAR(255) NOT NULL COMMENT '图片地址',
   link_url    VARCHAR(255) DEFAULT NULL COMMENT '跳转地址',
   position    VARCHAR(20)  NOT NULL DEFAULT 'HOME' COMMENT '展示位置 HOME首页/PORTAL列表页',

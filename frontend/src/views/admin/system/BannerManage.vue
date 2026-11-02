@@ -6,7 +6,7 @@
         <p class="sub">
           轮播图只在<strong>该位置内按排序号升序</strong>展示，序号小的在前；不填序号时自动排到该位置末尾，不会插队。
           活动结束建议先<strong>隐藏</strong>而不是删除——下次换张图还能复用同一位置，省得重新调顺序。
-          图片地址支持站内路径（如 <code>/images/banners/banner-1.svg</code>）与 http(s) 外链。
+          图片地址支持站内路径（如 <code>/images/banners/banner-1.jpg</code>）与 http(s) 外链。
         </p>
       </div>
       <div class="head-actions">
@@ -57,17 +57,19 @@
       <el-table :data="rows" v-loading="loading" size="small" border>
         <el-table-column label="预览" width="112" align="center">
           <template #default="{ row }">
-            <el-image :src="row.imageUrl" fit="cover" class="thumb">
-              <template #error>
-                <div class="thumb-error">加载失败</div>
-              </template>
-            </el-image>
+            <el-tooltip :content="row.imageUrl" placement="top">
+              <el-image :src="row.imageUrl" fit="cover" class="thumb">
+                <template #error>
+                  <div class="thumb-error">加载失败</div>
+                </template>
+              </el-image>
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column label="标题" min-width="200">
           <template #default="{ row }">
             <div class="cell-main">{{ row.title }}</div>
-            <div class="cell-sub mono">{{ row.imageUrl }}</div>
+            <div class="cell-sub">{{ row.subtitle || '无副标题' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="位置" width="90" align="center">
@@ -130,10 +132,18 @@
     <el-dialog v-model="dialogVisible" :title="editing ? '编辑轮播图' : '新增轮播图'" width="620px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="88px">
         <el-form-item label="标题" prop="title">
-          <el-input v-model="form.title" placeholder="如：信用越好 押金越低" maxlength="80" show-word-limit />
+          <el-input v-model="form.title" placeholder="如：山海之间，一路向南" maxlength="80" show-word-limit />
+        </el-form-item>
+        <el-form-item label="副标题" prop="subtitle">
+          <el-input
+            v-model="form.subtitle"
+            placeholder="选填，展示在标题下方，如：泉州两城直租 · 信用免押 · 说走就走"
+            maxlength="120"
+            show-word-limit
+          />
         </el-form-item>
         <el-form-item label="图片地址" prop="imageUrl">
-          <el-input v-model="form.imageUrl" placeholder="/images/banners/banner-1.svg 或 https://…" maxlength="255" />
+          <el-input v-model="form.imageUrl" placeholder="/images/banners/banner-1.jpg 或 https://…" maxlength="255" />
         </el-form-item>
         <el-form-item label="预览">
           <div class="preview-box">
@@ -213,6 +223,7 @@ const formRef = ref(null)
 
 const form = reactive({
   title: '',
+  subtitle: '',
   imageUrl: '',
   linkUrl: '',
   position: 'HOME',
@@ -267,6 +278,7 @@ function openCreate() {
   editingId.value = null
   Object.assign(form, {
     title: '',
+    subtitle: '',
     imageUrl: '',
     linkUrl: '',
     position: 'HOME',
@@ -281,6 +293,7 @@ function openEdit(row) {
   editingId.value = row.id
   Object.assign(form, {
     title: row.title,
+    subtitle: row.subtitle || '',
     imageUrl: row.imageUrl,
     linkUrl: row.linkUrl || '',
     position: row.position,

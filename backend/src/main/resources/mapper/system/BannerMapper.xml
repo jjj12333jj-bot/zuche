@@ -4,7 +4,7 @@
 <mapper namespace="com.zuche.module.system.mapper.BannerMapper">
 
     <sql id="Columns">
-        b.id, b.title, b.image_url, b.link_url, b.position, b.sort_no, b.status, b.create_time
+        b.id, b.title, b.subtitle, b.image_url, b.link_url, b.position, b.sort_no, b.status, b.create_time
     </sql>
 
     <select id="selectBannerPage" resultType="com.zuche.module.system.vo.BannerVO">

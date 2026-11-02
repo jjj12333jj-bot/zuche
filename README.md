@@ -34,7 +34,7 @@ zuche/
 │   └── 02-seed.sql             演示数据（品牌/车型/车辆/300 单/支付/退款/风控）
 ├── backend/                    Spring Boot 工程（含 mvnw）
 └── frontend/                   Vue 3 + Vite 工程
-    ├── public/images/          本地演示图（品牌/车型/内饰/轮播/占位/头像）
+    ├── public/images/          本地演示图（品牌/车型/轮播/登录背景/占位/头像）
     └── scripts/                演示图生成脚本（SVG，可重复执行）
 ```
 
@@ -259,7 +259,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/orders/<orderId
 | `/admin/stores` | 网点：4 个，能停用不轻易删（有车或有单即拦） |
 | `/admin/evaluations` | 评价：12 条，车况 4.25 / 服务 3.75 双维度均分，隐藏与删除两级处置 |
 | `/admin/announcements` | 公告：7 条（5 发布 / 2 草稿），草稿→发布两态，发布时间不被编辑覆盖 |
-| `/admin/banners` | 轮播图：3 张，排序号自动排末尾，图片地址只收 `/` 或 http(s) |
+| `/admin/banners` | 轮播图：2 张旅行实景图，标题+副标题可改，第一屏信用说明固定在前台 |
 | `/admin/logs` | 操作日志：AOP 自动留痕，失败行标红，参数脱敏+截断 2000 字 |
 | `/store/overview` | 网点管理员只看到网点管理菜单 |
 | `/store/evaluations` | 客户评价：仅本网点，只能解释性回复，没有删除权 |

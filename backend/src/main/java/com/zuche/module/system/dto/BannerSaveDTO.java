@@ -19,6 +19,10 @@ public class BannerSaveDTO {
     @Schema(description = "标题", example = "信用越好 押金越低")
     private String title;
 
+    @Size(max = 120, message = "副标题最多 120 字")
+    @Schema(description = "副标题，选填；前台展示在大标题下方", example = "两城直租 · 信用免押 · 说走就走")
+    private String subtitle;
+
     @NotBlank(message = "图片地址不能为空")
     @Pattern(regexp = "^(/|https?://).+", message = "图片地址必须以 / 或 http(s):// 开头")
     @Size(max = 255, message = "图片地址最多 255 字符")

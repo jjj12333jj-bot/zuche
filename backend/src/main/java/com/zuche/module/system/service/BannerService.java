@@ -1,5 +1,6 @@
 package com.zuche.module.system.service;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zuche.common.BusinessException;
@@ -100,6 +101,12 @@ public class BannerService {
         update.setUpdateTime(LocalDateTime.now());
         bannerMapper.updateById(update);
 
+        // updateById 默认忽略 null，副标题与跳转地址要支持「清空」，单独显式写一次
+        bannerMapper.update(null, new LambdaUpdateWrapper<Banner>()
+                .eq(Banner::getId, id)
+                .set(Banner::getSubtitle, update.getSubtitle())
+                .set(Banner::getLinkUrl, update.getLinkUrl()));
+
         log.info("编辑轮播图: id={}", id);
         return detail(id);
     }
@@ -142,6 +149,9 @@ public class BannerService {
 
     private void apply(BannerSaveDTO dto, Banner target) {
         target.setTitle(dto.getTitle().trim());
+        // 空串归一成 null：前台只判断有没有内容，不区分 "" 与 null
+        String subtitle = dto.getSubtitle();
+        target.setSubtitle(subtitle == null || subtitle.isBlank() ? null : subtitle.trim());
         target.setImageUrl(dto.getImageUrl().trim());
         // 空串归一成 null：前端判断「有没有跳转」只看是否为 null，两种空值会各写一套
         String link = dto.getLinkUrl();
@@ -160,6 +170,7 @@ public class BannerService {
         BannerVO vo = new BannerVO();
         vo.setId(entity.getId());
         vo.setTitle(entity.getTitle());
+        vo.setSubtitle(entity.getSubtitle());
         vo.setImageUrl(entity.getImageUrl());
         vo.setLinkUrl(entity.getLinkUrl());
         vo.setPosition(entity.getPosition());

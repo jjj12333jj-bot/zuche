@@ -3,11 +3,11 @@
  *
  * 输出目录：frontend/public/images
  *   brands/brand-{1..9}.svg      品牌 LOGO
- *   banners/banner-{1..3}.svg    首页轮播
  *   placeholder.svg              图片加载失败兜底
  *   avatar/default.svg           默认头像
  *
- * 车型图（cars/*.jpg）为实拍照片，不由本脚本生成，见 cars/README.md。
+ * 车型图（cars/*.jpg）与轮播图（banners/*.jpg）为实拍照片，不由本脚本生成，
+ * 见 cars/README.md 与 banners/README.md。
  *
  * 运行：node scripts/generate-demo-images.mjs（在 frontend 目录）
  */
@@ -269,37 +269,6 @@ function rearSvg() {
 </svg>`
 }
 
-function bannerSvg(index) {
-  const themes = [
-    { title: '信用越好 押金越低', sub: '优秀档押金 8 折 · 良好档 9 折 · 全程可查信用明细', from: '#1f3a5f', to: '#276b5c', tag: '信用风控' },
-    { title: '新用户首单立减 50', sub: '注册即得 100 信用分，在线选车 · 模拟支付 · 网点取还', from: '#243b55', to: '#3f5f8a', tag: '新人专享' },
-    { title: '新能源专区 低至 219/天', sub: '纯电与混动车型集中展示，支持异地还车', from: '#1d4a45', to: '#2f7d6b', tag: '新能源' }
-  ]
-  const t = themes[index - 1]
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="${t.from}"/><stop offset="1" stop-color="${t.to}"/>
-    </linearGradient>
-    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
-      <stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="1200" height="400" fill="url(#bg)"/>
-  <circle cx="1020" cy="60" r="220" fill="url(#glow)"/>
-  <circle cx="120" cy="380" r="150" fill="#fff" opacity=".04"/>
-  <g opacity=".08" stroke="#fff"><path d="M0 400 L1200 220"/><path d="M0 360 L1200 180"/></g>
-  <rect x="72" y="60" width="112" height="32" rx="16" fill="#fff" fill-opacity=".16"/>
-  <text x="128" y="82" text-anchor="middle" fill="#fff" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="14">${t.tag}</text>
-  <text x="72" y="168" fill="#fff" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="52" font-weight="700">${t.title}</text>
-  <text x="72" y="218" fill="#fff" fill-opacity=".72" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="18">${t.sub}</text>
-  <rect x="72" y="258" width="150" height="44" rx="22" fill="#fff"/>
-  <text x="147" y="286" text-anchor="middle" fill="${t.from}" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="15" font-weight="600">立即查看</text>
-  <g transform="translate(650,30) scale(0.66)">${carGroup('#e8edf3', 'sedan', { glass: '#1a2a3a' })}</g>
-  <text x="1128" y="368" text-anchor="end" fill="#fff" fill-opacity=".4" font-family="'Microsoft YaHei','PingFang SC',sans-serif" font-size="13">微租车 · 本地演示图</text>
-</svg>`
-}
-
 function placeholderSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
   <rect width="800" height="500" fill="#eef2f6"/>
@@ -328,8 +297,7 @@ function write(rel, content) {
 }
 
 BRANDS.forEach((b) => write(`brands/brand-${b.id}.svg`, brandSvg(b)))
-;[1, 2, 3].forEach((i) => write(`banners/banner-${i}.svg`, bannerSvg(i)))
 write('placeholder.svg', placeholderSvg())
 write('avatar/default.svg', avatarSvg())
 
-console.log(`已生成 ${BRANDS.length} 个品牌、3 张轮播图、占位图与头像（车型图使用 cars/*.jpg 实拍）`)
+console.log(`已生成 ${BRANDS.length} 个品牌 LOGO、占位图与头像（车型图与轮播图使用实拍 JPG）`)

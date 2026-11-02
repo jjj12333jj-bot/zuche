@@ -16,6 +16,9 @@ public class BannerVO {
 
     private String title;
 
+    @Schema(description = "副标题，前台大图上展示在大标题下方")
+    private String subtitle;
+
     private String imageUrl;
 
     private String linkUrl;
