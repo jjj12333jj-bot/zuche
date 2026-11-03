@@ -74,45 +74,14 @@
       </el-carousel>
     </section>
 
-    <section class="section">
-      <div class="page-container">
-        <div class="section-head">
-          <div>
-            <h2 class="section-title">按车型选车</h2>
-            <p class="section-sub">分类来自数据字典，后台可维护</p>
-          </div>
-          <router-link to="/vehicles" class="more-link">查看全部车辆 →</router-link>
-        </div>
-
-        <div v-loading="loadingOptions" class="category-grid">
-          <div
-            v-for="cat in options.categories"
-            :key="cat.code"
-            class="category-card"
-            @click="goCategory(cat.code)"
-          >
-            <div class="category-icon" :style="{ background: `${cat.color}1a`, color: cat.color }">
-              <el-icon :size="22">
-                <component :is="CATEGORY_ICON[cat.code] || 'Van'" />
-              </el-icon>
-            </div>
-            <div class="category-info">
-              <div class="category-name">{{ cat.label }}</div>
-              <div class="category-desc">{{ CATEGORY_DESC[cat.code] || '多款车型可选' }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="section section-gray">
       <div class="page-container">
         <div class="section-head">
           <div>
-            <h2 class="section-title">热门车型</h2>
-            <p class="section-sub">按累计出租次数排序，数据来自订单与车辆表</p>
+            <h2 class="section-title">热门车型推荐</h2>
+            <p class="section-sub">按累计出租次数排序，展示前 9 台</p>
           </div>
-          <router-link to="/vehicles" class="more-link">更多车型 →</router-link>
+          <router-link to="/vehicles" class="more-link">查看全部车辆 →</router-link>
         </div>
 
         <div v-loading="loadingHot" class="hot-grid">
@@ -131,7 +100,36 @@
       </div>
     </section>
 
+    <!-- 推荐出行方案：左侧一张大图 + 右侧四张场景图 -->
     <section class="section">
+      <div class="page-container">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">推荐出行方案</h2>
+            <p class="section-sub">按用车场景选车，从日常代步到长途自驾</p>
+          </div>
+        </div>
+
+        <div class="travel-grid">
+          <div
+            v-for="plan in travelPlans"
+            :key="plan.key"
+            class="travel-tile"
+            :class="{ 'travel-tile--main': plan.main }"
+            @click="goPlan(plan)"
+          >
+            <img :src="plan.image" :alt="plan.title" loading="lazy" />
+            <div class="travel-scrim"></div>
+            <div class="travel-text">
+              <h3>{{ plan.title }}</h3>
+              <p>{{ plan.desc }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-gray">
       <div class="page-container">
         <h2 class="section-title">租赁流程</h2>
         <div class="steps">
@@ -143,8 +141,46 @@
         </div>
       </div>
     </section>
+
+    <!-- 租车 Q&A：文案只写系统里真实存在的规则，不承诺发票/保险/客服 -->
+    <section class="section">
+      <div class="page-container">
+        <div class="qa-head">
+          <h2 class="section-title">租车 Q&amp;A</h2>
+          <p class="section-sub">押金、费用、取消与逾期，六个高频问题一次说清</p>
+        </div>
+
+        <div class="qa-grid">
+          <div v-for="(item, index) in faqs" :key="item.q" class="qa-card">
+            <div class="qa-title">
+              <span class="qa-index">Q{{ index + 1 }}</span>
+              <h3>{{ item.q }}</h3>
+            </div>
+            <p class="qa-answer">{{ item.a }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 服务保障条：四段满宽色块，文字与图标都对应真实能力 -->
+    <section class="service-band">
+      <div
+        v-for="item in services"
+        :key="item.title"
+        class="service-item"
+        :style="{ background: item.color }"
+      >
+        <el-icon class="service-icon" :size="124">
+          <component :is="item.icon" />
+        </el-icon>
+        <div class="service-title">{{ item.title }}</div>
+        <div class="service-sub">{{ item.sub }}</div>
+        <p class="service-desc">{{ item.desc }}</p>
+      </div>
+    </section>
   </div>
 </template>
+
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
@@ -158,16 +194,12 @@ import VehicleCard from '@/components/VehicleCard.vue'
 const router = useRouter()
 const userStore = useUserStore()
 
-const loadingOptions = ref(false)
 const loadingHot = ref(false)
 const hotVehicles = ref([])
 const vehicleTotal = ref(0)
 const banners = ref([])
 
 const options = reactive({
-  categories: [],
-  brands: [],
-  stores: [],
   priceRange: { minPrice: null, maxPrice: null }
 })
 
@@ -179,21 +211,108 @@ const creditLevels = [
   { code: 'WATCH', name: '待观察', range: '0 - 79 分', coefficient: 1.2, color: '#f56c6c' }
 ]
 
-const CATEGORY_ICON = {
-  ECONOMY: 'Money',
-  COMFORT: 'Suitcase',
-  SUV: 'Van',
-  LUXURY: 'Star',
-  EV: 'Lightning'
-}
+/**
+ * 推荐出行方案：每个场景对应一个分类筛选（或全部车辆），
+ * 文案里的价格/座位/车型都取自 vehicle_model 种子数据，避免和后台改价后对不上。
+ */
+const travelPlans = [
+  {
+    key: 'drive',
+    title: '自驾旅行',
+    desc: '2 个网点、24 台车，支持跨网点异地还车，日租百元起，租期越长折扣越低。',
+    image: '/images/travel/travel-drive.jpg',
+    link: { path: '/vehicles' },
+    main: true
+  },
+  {
+    key: 'commute',
+    title: '日常通勤',
+    desc: '英朗、轩逸日租 ¥109 起，市区代步省油。',
+    image: '/images/travel/travel-commute.jpg',
+    link: { path: '/vehicles', query: { category: 'ECONOMY' } }
+  },
+  {
+    key: 'business',
+    title: '商务接待',
+    desc: 'A6L、5 系、Q5L 豪华型，后排空间与质感都在线。',
+    image: '/images/travel/travel-business.jpg',
+    link: { path: '/vehicles', query: { category: 'LUXURY' } }
+  },
+  {
+    key: 'family',
+    title: '亲子出游',
+    desc: '七座途观L、CR-V，一家人行李都装得下。',
+    image: '/images/travel/travel-family.jpg',
+    link: { path: '/vehicles', query: { category: 'SUV' } }
+  },
+  {
+    key: 'visit',
+    title: '探亲访友',
+    desc: '行李伴手礼都装得下，支持异地还车。',
+    image: '/images/travel/travel-visit.jpg',
+    link: { path: '/vehicles', query: { category: 'COMFORT' } }
+  }
+]
 
-const CATEGORY_DESC = {
-  ECONOMY: '通勤代步，经济省油',
-  COMFORT: '空间舒适，长途友好',
-  SUV: '通过性好，适合家庭',
-  LUXURY: '商务接待，品质出行',
-  EV: '纯电与混动，用车成本低'
-}
+/** 常见问题：只写系统里真实生效的规则，不承诺发票/保险/客服等边界外能力 */
+const faqs = [
+  {
+    q: '租车需要哪些证件？',
+    a: '下单时填写驾驶人姓名与手机号；到店取车请出示本人身份证与驾驶证原件（C1 及以上）。系统只做字段录入与格式校验，不做联网核验。'
+  },
+  {
+    q: '押金怎么算，什么时候退？',
+    a: '押金 = 车型基准押金 × 信用系数。信用 120 分以上 8 折、100–119 分 9 折、80–99 分原价、80 分以下 1.2 倍。押金与租金分两笔支付，归还结算后原路退回。'
+  },
+  {
+    q: '预订流程是怎样的？',
+    a: '① 选择取车/还车网点与租期；② 挑选车型，页面实时算出租金与押金；③ 提交订单并完成模拟支付；④ 到店取车，归还后自动结算。'
+  },
+  {
+    q: '订单可以取消吗？',
+    a: '待支付订单可直接取消，不产生费用；已支付未取车的订单取消后租金与押金原路退回，但会记录一次取消行为并影响信用评分；已取车后只能走归还流程。'
+  },
+  {
+    q: '租金里包含哪些费用？',
+    a: '日租价 × 租期天数 × 折扣率，押金单独计算。跨网点归还另收异地还车费，下单时按网点组合明码展示；平台不额外收取保险与服务费。'
+  },
+  {
+    q: '逾期归还怎么处理？',
+    a: '超过计划还车时间按天计违约金，从押金中扣除，最多扣到押金为 0；同时按天扣信用分（有次数上限），信用等级下降会让下次租车押金系数变高。'
+  }
+]
+
+/** 服务保障条：四条都对应代码里已经跑通的机制 */
+const services = [
+  {
+    title: '7×24 自助下单',
+    sub: '支付成功即锁车',
+    desc: '线上下单不受门店营业时间限制，支付成功那一刻车辆即被锁定，避免到店无车。',
+    icon: 'Clock',
+    color: '#12539e'
+  },
+  {
+    title: '信用减免押金',
+    sub: '优秀等级押金 8 折',
+    desc: '按时归还、少取消、少逾期都会加分，信用 120 分以上押金系数降到 0.8。',
+    icon: 'Wallet',
+    color: '#0f8f7f'
+  },
+  {
+    title: '支持自助取还车',
+    sub: '到店自助确认取车',
+    desc: '在订单页点击「确认取车」即进入在租，归还后系统自动结算押金与违约金。',
+    icon: 'Key',
+    color: '#d4922a'
+  },
+  {
+    title: '全程价格透明',
+    sub: '租金押金分项可见',
+    desc: '租金、押金、异地还车费、逾期违约金逐项列明，支付前就能看到最终金额。',
+    icon: 'Tickets',
+    color: '#1f2d3d'
+  }
+]
 
 const steps = [
   { title: '选车下单', desc: '按分类、品牌、价格筛选，实时看到按信用计算出的应付押金' },
@@ -221,8 +340,8 @@ function syncHeroHeight() {
   else heroHeight.value = '420px'
 }
 
-function goCategory(code) {
-  router.push({ path: '/vehicles', query: { category: code } })
+function goPlan(plan) {
+  router.push(plan.link)
 }
 
 function goBanner(slide) {
@@ -269,12 +388,11 @@ function formatMoney(value) {
 }
 
 async function loadData() {
-  loadingOptions.value = true
   loadingHot.value = true
   try {
     const [optRes, hotRes, bannerRes] = await Promise.all([
       getVehicleOptions(),
-      getVehicles({ page: 1, size: 4, sortBy: 'popular' }),
+      getVehicles({ page: 1, size: 9, sortBy: 'popular' }),
       getBanners({ position: 'HOME' })
     ])
     Object.assign(options, optRes.data || {})
@@ -284,7 +402,6 @@ async function loadData() {
   } catch (e) {
     // 错误提示由 request 拦截器统一处理，首页保留静态内容
   } finally {
-    loadingOptions.value = false
     loadingHot.value = false
   }
 }
@@ -574,56 +691,200 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.category-grid {
+.hot-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-  min-height: 84px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  min-height: 120px;
 }
 
-.category-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 16px;
+/* ---------- 推荐出行方案 ---------- */
+.travel-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  grid-auto-rows: 208px;
+  gap: 16px;
+}
+
+.travel-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #0f2f52;
+  cursor: pointer;
+}
+
+.travel-tile--main {
+  grid-row: span 2;
+}
+
+.travel-tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.45s ease;
+}
+
+.travel-tile:hover img {
+  transform: scale(1.05);
+}
+
+.travel-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    0deg,
+    rgba(6, 18, 34, 0.86) 0%,
+    rgba(6, 18, 34, 0.4) 44%,
+    rgba(6, 18, 34, 0.04) 76%
+  );
+}
+
+/* 大图的房车在右下方，文案改压左上角，遮罩自上而下压暗，车就不会被字挡住 */
+.travel-tile--main .travel-scrim {
+  background: linear-gradient(
+    180deg,
+    rgba(6, 18, 34, 0.9) 0%,
+    rgba(6, 18, 34, 0.62) 34%,
+    rgba(6, 18, 34, 0.12) 64%,
+    rgba(6, 18, 34, 0) 88%
+  );
+}
+
+.travel-tile--main .travel-text {
+  top: 0;
+  bottom: auto;
+  padding-top: 24px;
+}
+
+.travel-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 22px;
+  color: #fff;
+}
+
+.travel-text h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.travel-tile--main .travel-text h3 {
+  font-size: 24px;
+}
+
+.travel-text p {
+  margin: 0;
+  max-width: 360px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* ---------- 租车 Q&A ---------- */
+.qa-head {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.qa-head .section-sub {
+  margin-top: 8px;
+}
+
+.qa-grid {
+  column-count: 3;
+  column-gap: 16px;
+}
+
+.qa-card {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  padding: 20px 22px;
   background: #fff;
   border: 1px solid #ebeef5;
   border-radius: 12px;
-  cursor: pointer;
-  transition: border-color 0.18s ease, transform 0.18s ease;
 }
 
-.category-card:hover {
-  border-color: #409eff;
-  transform: translateY(-2px);
-}
-
-.category-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+.qa-title {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  align-items: flex-start;
+  gap: 10px;
 }
 
-.category-name {
+.qa-index {
+  flex-shrink: 0;
+  margin-top: 1px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: #fdf6e3;
+  color: #c08b1f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qa-title h3 {
+  margin: 0;
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.5;
+  color: #303133;
 }
 
-.category-desc {
-  margin-top: 3px;
-  font-size: 12px;
-  color: #909399;
+.qa-answer {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.9;
+  color: #7a8290;
 }
 
-.hot-grid {
+/* ---------- 服务保障条 ---------- */
+.service-band {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  min-height: 120px;
+}
+
+.service-item {
+  position: relative;
+  overflow: hidden;
+  min-height: 196px;
+  padding: 36px 30px;
+  color: #fff;
+}
+
+.service-icon {
+  position: absolute;
+  right: -16px;
+  bottom: -26px;
+  opacity: 0.11;
+  pointer-events: none;
+}
+
+.service-title {
+  position: relative;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.service-sub {
+  position: relative;
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.service-desc {
+  position: relative;
+  margin: 12px 0 0;
+  max-width: 250px;
+  font-size: 12px;
+  line-height: 1.85;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .steps {
@@ -665,11 +926,14 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1100px) {
-  .category-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .travel-grid {
+    grid-auto-rows: 190px;
   }
-  .hot-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .travel-text {
+    padding: 18px;
+  }
+  .service-item {
+    padding: 30px 22px;
   }
 }
 
@@ -692,7 +956,22 @@ onUnmounted(() => {
   .photo-sub {
     font-size: 14px;
   }
-  .category-grid {
+  .hot-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .travel-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 180px;
+  }
+  /* 两栏时大图横跨两列两行，避免整屏只剩一张图或文字溢出卡片 */
+  .travel-tile--main {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+  .qa-grid {
+    column-count: 2;
+  }
+  .service-band {
     grid-template-columns: repeat(2, 1fr);
   }
   .slide-photo {
@@ -737,6 +1016,20 @@ onUnmounted(() => {
 
 @media (max-width: 560px) {
   .hot-grid {
+    grid-template-columns: 1fr;
+  }
+  .travel-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 200px;
+  }
+  .travel-tile--main {
+    grid-column: span 1;
+    grid-row: span 2;
+  }
+  .qa-grid {
+    column-count: 1;
+  }
+  .service-band {
     grid-template-columns: 1fr;
   }
   .hero-text h1 {
