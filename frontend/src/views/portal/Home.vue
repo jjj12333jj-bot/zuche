@@ -46,7 +46,6 @@
                   <span class="level-range">{{ item.range }}</span>
                   <el-tag :color="item.color" effect="dark" size="small">{{ coefLabel(item.coefficient) }}</el-tag>
                 </div>
-                <div class="panel-tip">等级阈值与押金系数均可在后台“信用规则”中配置</div>
               </div>
             </div>
           </div>
@@ -544,12 +543,6 @@ onUnmounted(() => {
   flex: 1;
   color: rgba(255, 255, 255, 0.74);
   font-size: 13px;
-}
-
-.panel-tip {
-  margin-top: 12px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
 }
 
 /* ---------- 其余屏：旅行实景图 ---------- */
