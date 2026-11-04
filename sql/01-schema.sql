@@ -144,7 +144,7 @@ CREATE TABLE sys_dict_data (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据字典表';
 
 -- =====================================================================
--- 模块二：车辆资产精细化管理（7 张）
+-- 模块二：车辆资产精细化管理（6 张）
 -- 品牌 → 车型（参数/指导价） → 车辆（具体一台车：车牌/VIN/所属网点）
 -- 车辆为最小可租单元，因此一单多车通过 order_item 多行实现
 -- =====================================================================
@@ -279,34 +279,11 @@ CREATE TABLE vehicle_insurance (
   KEY idx_end_date (end_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='车辆保险记录表';
 
--- 13. 车辆违章记录表
-DROP TABLE IF EXISTS vehicle_violation;
-CREATE TABLE vehicle_violation (
-  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
-  vehicle_id      BIGINT UNSIGNED NOT NULL COMMENT '车辆ID',
-  order_id        BIGINT UNSIGNED DEFAULT NULL COMMENT '关联订单(定位到具体租车人)',
-  user_id         BIGINT UNSIGNED DEFAULT NULL COMMENT '责任用户',
-  violation_time  DATETIME     NOT NULL COMMENT '违章时间',
-  violation_place VARCHAR(200) DEFAULT NULL COMMENT '违章地点',
-  violation_type  VARCHAR(100) DEFAULT NULL COMMENT '违章类型',
-  fine_amount     DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '罚款金额',
-  points          INT          NOT NULL DEFAULT 0 COMMENT '扣分',
-  handle_status   VARCHAR(20)  NOT NULL DEFAULT 'UNHANDLED' COMMENT '处理状态 UNHANDLED未处理/HANDLED已处理/APPEALING申诉中',
-  handle_time     DATETIME     DEFAULT NULL COMMENT '处理时间',
-  remark          VARCHAR(200) DEFAULT NULL COMMENT '备注',
-  create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  update_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  deleted         TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除 0否 1是',
-  PRIMARY KEY (id),
-  KEY idx_vehicle (vehicle_id, violation_time),
-  KEY idx_status (handle_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='车辆违章记录表';
-
 -- =====================================================================
 -- 模块三：网点与调度管理（3 张）
 -- =====================================================================
 
--- 14. 多网点信息表（不含地图渲染能力：经纬度仅存储，前端不加载任何地图 SDK）
+-- 13. 多网点信息表（不含地图渲染能力：经纬度仅存储，前端不加载任何地图 SDK）
 DROP TABLE IF EXISTS store;
 CREATE TABLE store (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '网点ID',
@@ -327,7 +304,7 @@ CREATE TABLE store (
   KEY idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='网点信息表';
 
--- 15. 网点员工关联表（一个网点多个管理员/员工，权限按网点隔离）
+-- 14. 网点员工关联表（一个网点多个管理员/员工，权限按网点隔离）
 DROP TABLE IF EXISTS store_employee;
 CREATE TABLE store_employee (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -344,7 +321,7 @@ CREATE TABLE store_employee (
   KEY idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='网点员工关联表';
 
--- 16. 跨网点调车申请表
+-- 15. 跨网点调车申请表
 DROP TABLE IF EXISTS dispatch_apply;
 CREATE TABLE dispatch_apply (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -373,7 +350,7 @@ CREATE TABLE dispatch_apply (
 -- 订单主表 + 明细（一单多车）+ 支付流水 + 退款流水 + 评价 + 地址
 -- =====================================================================
 
--- 17. 租赁订单主表（信用快照字段：历史订单押金不随用户当前分数漂移）
+-- 16. 租赁订单主表（信用快照字段：历史订单押金不随用户当前分数漂移）
 DROP TABLE IF EXISTS lease_order;
 CREATE TABLE lease_order (
   id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '订单ID',
@@ -415,7 +392,7 @@ CREATE TABLE lease_order (
   KEY idx_level_snapshot (credit_level_snapshot)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='租赁订单主表';
 
--- 18. 订单明细表（一单多车；下单时快照车名/车牌/日租金）
+-- 17. 订单明细表（一单多车；下单时快照车名/车牌/日租金）
 DROP TABLE IF EXISTS order_item;
 CREATE TABLE order_item (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -436,7 +413,7 @@ CREATE TABLE order_item (
   KEY idx_vehicle (vehicle_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单明细表';
 
--- 19. 支付流水表（模拟支付；营收口径只统计 RENT）
+-- 18. 支付流水表（模拟支付；营收口径只统计 RENT）
 DROP TABLE IF EXISTS payment_record;
 CREATE TABLE payment_record (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -458,7 +435,7 @@ CREATE TABLE payment_record (
   KEY idx_pay_time (pay_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付流水表(模拟)';
 
--- 20. 退款流水表（押金退还、取消退款、违约金冲正）
+-- 19. 退款流水表（押金退还、取消退款、违约金冲正）
 DROP TABLE IF EXISTS refund_record;
 CREATE TABLE refund_record (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -483,7 +460,7 @@ CREATE TABLE refund_record (
   KEY idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='退款流水表(模拟)';
 
--- 21. 车辆评价表（一单一评，只有已完成订单可评价）
+-- 20. 车辆评价表（一单一评，只有已完成订单可评价）
 DROP TABLE IF EXISTS order_evaluation;
 CREATE TABLE order_evaluation (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -507,7 +484,7 @@ CREATE TABLE order_evaluation (
   KEY idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='车辆评价表';
 
--- 22. 用户地址表（用于合同/发票寄送，本系统不接物流）
+-- 21. 用户地址表（用于合同/发票寄送，本系统不接物流）
 DROP TABLE IF EXISTS user_address;
 CREATE TABLE user_address (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -530,7 +507,7 @@ CREATE TABLE user_address (
 -- 模块五：信用风控（4 张，核心特色）
 -- =====================================================================
 
--- 23. 信用规则与押金系数配置表
+-- 22. 信用规则与押金系数配置表
 --     rule_type=LEVEL  → 等级区间与押金系数
 --     rule_type=ACTION → 行为加减分（完成/按时归还/逾期/取消）
 --     两类配置都是「可后台修改」的业务参数，合并为一张规则表用 rule_type 区分，
@@ -558,7 +535,7 @@ CREATE TABLE credit_rule (
   KEY idx_min_score (min_score)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用规则与押金系数配置表';
 
--- 24. 信用分变动日志表（分数可复算；uk_dedup 保证同一订单同一事件只记一次）
+-- 23. 信用分变动日志表（分数可复算；uk_dedup 保证同一订单同一事件只记一次）
 DROP TABLE IF EXISTS credit_log;
 CREATE TABLE credit_log (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -579,7 +556,7 @@ CREATE TABLE credit_log (
   KEY idx_user_time (user_id, create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用分变动日志表';
 
--- 25. 信用申诉记录表（用户对扣分有异议时申诉，管理员复核后可调整分数）
+-- 24. 信用申诉记录表（用户对扣分有异议时申诉，管理员复核后可调整分数）
 DROP TABLE IF EXISTS credit_appeal;
 CREATE TABLE credit_appeal (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -603,7 +580,7 @@ CREATE TABLE credit_appeal (
   KEY idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用申诉记录表';
 
--- 26. 风控黑名单/预警表（逾期未还、严重违约自动/手工加入，影响下单与押金）
+-- 25. 风控黑名单/预警表（逾期未还、严重违约自动/手工加入，影响下单与押金）
 DROP TABLE IF EXISTS credit_blacklist;
 CREATE TABLE credit_blacklist (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -627,7 +604,7 @@ CREATE TABLE credit_blacklist (
 -- 模块六：运营与系统审计（4 张）
 -- =====================================================================
 
--- 27. 系统公告表
+-- 26. 系统公告表
 DROP TABLE IF EXISTS announcement;
 CREATE TABLE announcement (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -645,7 +622,7 @@ CREATE TABLE announcement (
   KEY idx_status_time (status, publish_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统公告表';
 
--- 28. 首页轮播图表
+-- 27. 首页轮播图表
 DROP TABLE IF EXISTS banner;
 CREATE TABLE banner (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -663,7 +640,7 @@ CREATE TABLE banner (
   KEY idx_sort (position, sort_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='首页轮播图表';
 
--- 29. 用户收藏表
+-- 28. 用户收藏表
 DROP TABLE IF EXISTS favorite;
 CREATE TABLE favorite (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -676,7 +653,7 @@ CREATE TABLE favorite (
   KEY idx_vehicle (vehicle_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户收藏表';
 
--- 30. 系统操作日志表（AOP 切面写入后台写操作）
+-- 29. 系统操作日志表（AOP 切面写入后台写操作）
 DROP TABLE IF EXISTS operation_log;
 CREATE TABLE operation_log (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -749,7 +726,6 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, perm
 (2043,204, '车辆档案',   'C', '/admin/vehicle/list', 'admin/vehicle/VehicleList','vehicle:manage',   'Van',        3, 1, 1),
 (2044,204, '保养维修',   'C', '/admin/vehicle/maintenance','admin/vehicle/Maintenance','vehicle:maintenance:list','Tools', 4, 1, 1),
 (2045,204, '保险记录',   'C', '/admin/vehicle/insurance','admin/vehicle/Insurance','vehicle:insurance:list','Document', 5, 1, 1),
-(2046,204, '违章记录',   'C', '/admin/vehicle/violation','admin/vehicle/Violation','vehicle:violation:list','Warning', 6, 1, 1),
 (205, 20,  '订单管理',   'C', '/admin/orders',       'admin/OrderManage',     'order:manage',        'Tickets',    5, 1, 1),
 (206, 20,  '用户管理',   'C', '/admin/users',        'admin/UserManage',      'user:manage',         'UserFilled', 6, 1, 1),
 (207, 20,  '网点管理',   'C', '/admin/stores',       'admin/StoreManage',     'store:manage',        'OfficeBuilding', 7, 1, 1),
@@ -818,10 +794,6 @@ INSERT INTO sys_dict_data (dict_type, dict_code, dict_label, dict_value, sort_no
 ('appeal_status', 'PENDING',  '待处理', 'warning', 1, NULL),
 ('appeal_status', 'APPROVED', '已通过', 'success', 2, NULL),
 ('appeal_status', 'REJECTED', '已驳回', 'danger',  3, NULL),
-
-('violation_status', 'UNHANDLED', '未处理', 'danger',  1, NULL),
-('violation_status', 'HANDLED',   '已处理', 'success', 2, NULL),
-('violation_status', 'APPEALING', '申诉中', 'warning', 3, NULL),
 
 ('blacklist_type', 'WARNING',   '预警',     'warning', 1, '限制高价值车型'),
 ('blacklist_type', 'OVERRIDE',  '限制下单', 'danger',  2, '需人工审核'),

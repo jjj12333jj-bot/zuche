@@ -3,7 +3,7 @@
 --  前置：先执行 01-schema.sql（含角色/菜单/字典/信用规则/网点/3个账号）
 --  执行: mysql -h127.0.0.1 -P3306 -uroot -p123456 --default-character-set=utf8mb4 < sql/02-seed.sql
 --
---  数据规模：9 品牌 / 24 车型 / 24 台车 / 72 张车图 / 保险 / 保养 / 违章
+--  数据规模：9 品牌 / 24 车型 / 24 台车 / 72 张车图 / 保险 / 保养
 --            6 位普通用户 / 300 条订单 / 约 400 条明细 / 750 条支付流水 / 押金退款
 --            评价、收藏、地址、公告、轮播、调车、申诉、风控名单、操作日志
 --
@@ -128,16 +128,6 @@ INSERT INTO vehicle_maintenance (vehicle_id, maint_type, maint_date, mileage, co
 (17, 'REPAIR',   DATE_SUB(CURDATE(), INTERVAL 75 DAY),  2.2,  890.00, '更换雨刮电机',           2, NULL, '质保内维修'),
 (19, 'MAINTAIN', DATE_SUB(CURDATE(), INTERVAL 40 DAY),  1.9,  600.00, '轮胎换位、制动液检测',   3, DATE_ADD(CURDATE(), INTERVAL 140 DAY), '常规保养'),
 (21, 'MAINTAIN', DATE_SUB(CURDATE(), INTERVAL 25 DAY),  1.1, 1800.00, '全合成机油、空调系统清洗', 2, DATE_ADD(CURDATE(), INTERVAL 155 DAY), '豪华车型专项保养');
-
--- 违章记录
-INSERT INTO vehicle_violation (vehicle_id, order_id, user_id, violation_time, violation_place, violation_type, fine_amount, points, handle_status, handle_time, remark) VALUES
-(3,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 40 DAY), '泉州市南安市成功街',  '机动车违反禁令标志', 200.00, 3, 'UNHANDLED', NULL, '待责任人处理'),
-(9,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 33 DAY), '泉州市晋江市世纪大道',      '超速 20% 以下',      100.00, 3, 'HANDLED',   DATE_SUB(NOW(), INTERVAL 20 DAY), '已由承租人缴纳'),
-(12, NULL, NULL, DATE_SUB(NOW(), INTERVAL 28 DAY), '泉州市南安市江北大道',    '违法停车',           200.00, 0, 'HANDLED',   DATE_SUB(NOW(), INTERVAL 15 DAY), '已处理'),
-(17, NULL, NULL, DATE_SUB(NOW(), INTERVAL 18 DAY), '泉州市晋江市阳光路',      '未按导向车道行驶',   100.00, 2, 'UNHANDLED', NULL, '待核实'),
-(21, NULL, NULL, DATE_SUB(NOW(), INTERVAL 12 DAY), '泉州市丰泽区田安路', '闯红灯',             200.00, 6, 'APPEALING', NULL, '承租人申诉中'),
-(5,  NULL, NULL, DATE_SUB(NOW(), INTERVAL 8 DAY),  '泉州市南安市新华街',      '违法停车',           200.00, 0, 'UNHANDLED', NULL, NULL),
-(23, NULL, NULL, DATE_SUB(NOW(), INTERVAL 5 DAY),  '泉州市晋江市和平路',      '占用应急车道',       200.00, 6, 'UNHANDLED', NULL, NULL);
 
 -- ---------------------------------------------------------------------
 -- 4. 普通用户（含信用校准，走 credit_log 留痕）
