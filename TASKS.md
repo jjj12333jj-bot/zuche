@@ -111,6 +111,7 @@
 ## 阶段 6：收尾与答辩（进行中）
 - [x] seed 数据调优（热力图双峰明显、预测有趋势、四等级都有量）—— seed v2 完成
 - [x] 多账号并行登录：登录态从 localStorage 改为 sessionStorage，按标签页隔离（docs/11）
+- [x] 个人中心（资料/改密）+ 首页公告栏 + 订单列表押金状态（2026-11-24）
 - [x] 超时未取车自动取消（`PickupTimeoutTask` 每日 01:30；`POST /api/admin/risk/scan` 串行复用同一逻辑，2026-11-24）
 - [ ] Swagger 注解补全、接口示例
 - [ ] 全量构建回归（后端 package + 前端 build）
