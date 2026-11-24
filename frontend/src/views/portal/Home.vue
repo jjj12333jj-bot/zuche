@@ -446,7 +446,7 @@ async function loadData() {
     banners.value = bannerRes.data || []
     try {
       const noticeRes = await getAnnouncements()
-      announcements.value = (noticeRes.data || []).slice(0, 3)
+      announcements.value = (noticeRes.data || []).slice(0, 5)
     } catch (e) {
       announcements.value = []
     }

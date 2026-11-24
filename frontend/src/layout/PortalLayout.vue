@@ -9,7 +9,7 @@
 
         <nav class="nav">
           <router-link
-            v-for="item in navs"
+            v-for="item in visibleNavs"
             :key="item.path"
             :to="item.path"
             class="nav-item"
@@ -100,10 +100,13 @@ const userStore = useUserStore()
 const navs = [
   { path: '/', label: '首页' },
   { path: '/vehicles', label: '车辆租赁' },
-  { path: '/orders', label: '我的订单' },
-  { path: '/credit', label: '信用中心' },
-  { path: '/profile', label: '个人中心' }
+  { path: '/orders', label: '我的订单', authOnly: true },
+  { path: '/credit', label: '信用中心', authOnly: true },
+  { path: '/profile', label: '个人中心', authOnly: true }
 ]
+
+// 未登录时不显示需要身份的三个入口，避免点进去再被弹回登录页
+const visibleNavs = computed(() => navs.filter((item) => !item.authOnly || userStore.isLogin))
 
 const LEVEL_MAP = {
   EXCELLENT: '优秀',

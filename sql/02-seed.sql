@@ -170,7 +170,6 @@ INSERT INTO announcement (title, content, type, publisher_id, status, view_count
 ('新网点开业：泉州晋江店', '泉州晋江店正式营业，取还车时间 08:00-20:00，支持跨网点还车。开业首月经济型车型日租金 8 折。', 'ACTIVITY', 1, 1, 156, DATE_SUB(NOW(), INTERVAL 6 DAY)),
 ('假期取车提醒', '假期期间取车请提前 30 分钟到店，携带身份证与驾驶证原件。逾期归还将按日租金 1.5 倍收取违约金，并影响信用分。', 'NOTICE', 1, 1, 512, DATE_SUB(NOW(), INTERVAL 3 DAY)),
 ('押金退还时效说明', '网点确认归还后系统自动发起押金退还，走线上支付通道，1 个工作日内完成。可在订单详情-退款记录中查看流水状态。', 'NOTICE', 1, 1, 87, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-('邀请好友得 50 元租车券', '活动期间邀请好友注册并完成首单，双方各得 50 元租车券，券可叠加使用，有效期 90 天。同一设备、同一手机号视为同一用户。', 'ACTIVITY', 1, 1, 64, DATE_SUB(NOW(), INTERVAL 2 HOUR)),
 -- 下面两条是草稿：后台列表要能演示「草稿 / 已发布」两态，草稿不进前台公告栏，publish_time 为空
 ('2026 年春节网点营业时间安排', '春节期间（除夕至初六）各网点营业时间调整为 09:00-17:00，泉州南安店、泉州晋江店均正常营业。跨网点还车请提前在订单中备注。', 'NOTICE', 1, 0, 0, NULL),
 ('新能源车型里程限制调整说明', '自下月起，新能源车型单日里程上限由 300 公里调整为 350 公里，超出部分按 0.8 元/公里计费。本条公告待运营确认后发布。', 'RULE', 1, 0, 0, NULL);
@@ -614,6 +613,27 @@ INSERT INTO credit_appeal (appeal_no, user_id, credit_log_id, order_id, appeal_r
 ('A202610200001', 7, NULL, NULL, '逾期是因为车辆故障无法启动，已联系网点救援，不应计入逾期。', 'PENDING',  NULL, NULL, NULL, 0, DATE_SUB(NOW(), INTERVAL 3 DAY)),
 ('A202610180001', 6, NULL, NULL, '取车迟到 20 分钟，原因是地铁延误，希望酌情减免扣分。', 'REJECTED', 1, DATE_SUB(NOW(), INTERVAL 5 DAY), '取车时间已在订单中明确，维持原判', 0, DATE_SUB(NOW(), INTERVAL 7 DAY)),
 ('A202610120001', 4, NULL, NULL, '订单取消是网点无车导致，非本人原因。', 'APPROVED', 1, DATE_SUB(NOW(), INTERVAL 14 DAY), '经核实网点库存异常，恢复扣分 3 分', 3, DATE_SUB(NOW(), INTERVAL 16 DAY));
+
+-- 待审申诉要挂在具体的扣分记录上：credit_log_id 为空时，后台「通过」只能手填补回分值，
+-- 「按原扣分自动补回」这条路径就演示不出来。
+-- 做法：把用户 7 的 5 分从「初始化校准」拆成一条真实的「逾期归还」事件（总分仍是 74），
+-- 再让 PENDING 的那条申诉指向它——审批通过时系统按 -5 自动补回。
+UPDATE credit_log SET score_change = -21, score_after = 79,
+       reason = '初始化校准：历史 2 次逾期归还，转入待观察（其余 5 分见逾期归还事件）'
+ WHERE user_id = 7 AND action_code = 'ADMIN_ADJUST';
+
+INSERT INTO credit_log (user_id, action_code, change_type, score_before, score_change, score_after, order_id, dedup_key, reason, create_time)
+SELECT 7, 'OVERDUE_RETURN', 'EVENT', 79, -5, 74, o.id, 'overdue-return', '逾期 1 天后归还',
+       TIMESTAMP(DATE_ADD(o.end_date, INTERVAL 1 DAY), '11:30:00')
+  FROM lease_order o
+ WHERE o.user_id = 7 AND o.overdue_days > 0 AND o.deleted = 0
+ ORDER BY o.id DESC LIMIT 1;
+
+UPDATE credit_appeal
+   SET credit_log_id = (SELECT l.id FROM credit_log l
+                         WHERE l.user_id = 7 AND l.action_code = 'OVERDUE_RETURN'
+                         ORDER BY l.id DESC LIMIT 1)
+ WHERE status = 'PENDING';
 
 INSERT INTO credit_blacklist (user_id, list_type, reason, trigger_rule, effective_time, expire_time, status, operator_id) VALUES
 (7, 'WARNING', '近 90 天累计 2 次逾期归还，触发预警', '90天内逾期≥2次', DATE_SUB(NOW(), INTERVAL 20 DAY), DATE_ADD(NOW(), INTERVAL 70 DAY), 'ACTIVE', NULL),
