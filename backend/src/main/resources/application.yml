@@ -52,6 +52,11 @@ knife4j:
 zuche:
   risk:
     scan-cron: 0 0 1 * * ?
+  order:
+    # 取车日之后第几天仍未取车即判定超时（1 = 次日凌晨扫掉昨天没取车的单）
+    pickup-timeout-days: 1
+    # 排在 01:00 逾期扫描之后半小时，避免两张任务同时改同一批订单
+    pickup-timeout-cron: 0 30 1 * * ?
 
 springdoc:
   api-docs:

@@ -1,6 +1,7 @@
 package com.zuche.module.risk.controller;
 
 import com.zuche.common.Result;
+import com.zuche.module.order.service.PickupTimeoutService;
 import com.zuche.module.risk.service.RiskControlService;
 import com.zuche.module.risk.vo.OverdueScanVO;
 import com.zuche.security.RequireRole;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,12 +34,20 @@ import java.util.Map;
 public class AdminRiskController {
 
     private final RiskControlService riskControlService;
+    private final PickupTimeoutService pickupTimeoutService;
 
-    @Operation(summary = "立即执行逾期扫描",
-            description = "与每日 01:00 定时任务同一段逻辑：超期订单置逾期、写预警/黑名单、解除到期名单")
+    @Operation(summary = "立即执行风控扫描",
+            description = "与每日定时任务同一段逻辑：①超期未还订单置逾期、写预警/黑名单、解除到期名单；"
+                    + "②超过取车日仍未取车的订单自动取消、退款、释放车辆并扣信用分")
     @PostMapping("/scan")
     public Result<OverdueScanVO> scan() {
-        return Result.success("扫描完成", riskControlService.scanOverdue());
+        OverdueScanVO vo = riskControlService.scanOverdue();
+        List<String> cancelled = pickupTimeoutService.scan();
+        for (String orderNo : cancelled) {
+            vo.getDetails().add(orderNo + " 超时未取车，已自动取消并退款");
+        }
+        return Result.success("扫描完成：逾期更新 " + vo.getMarkedCount()
+                + " 单，超时未取车取消 " + cancelled.size() + " 单", vo);
     }
 
     @Operation(summary = "风控概览", description = "逾期订单数、预警数、黑名单数、待处理申诉数")

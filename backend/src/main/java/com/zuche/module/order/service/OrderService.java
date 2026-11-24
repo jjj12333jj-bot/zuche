@@ -321,6 +321,35 @@ public class OrderService {
     }
 
     /**
+     * 超时未取车自动取消（系统发起）
+     *
+     * <p>与用户主动取消走同一套资金与信用规则：先退款、再释放车辆、最后动信用分，
+     * 保证"有钱退才扣分"的顺序不乱。区别只有两点：不校验订单归属、原因固定为系统原因。</p>
+     *
+     * @return true 表示本次确实取消了；false 表示订单已被其他操作推进（取车/取消），跳过即可
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public boolean cancelTimeoutPickup(Long orderId, String reason) {
+        LeaseOrder order = orderMapper.selectByIdForUpdate(orderId);
+        if (order == null || !OrderStatus.WAIT_PICKUP.name().equals(order.getStatus())) {
+            return false;
+        }
+        String cancelReason = StringUtils.hasText(reason) ? reason : "超时未取车，系统自动取消";
+        stateMachine.assertTransfer(OrderStatus.WAIT_PICKUP, OrderStatus.CANCELLED);
+
+        BigDecimal refunded = refundPaidOrder(order, cancelReason);
+        releaseVehicles(orderId);
+        updateCancel(orderId, cancelReason, "REFUNDED");
+
+        creditService.recordEvent(buildEvent(order, "CANCEL_PAID", "pickup-timeout",
+                "超时未取车，系统自动取消订单"));
+        creditService.refitBehavior(order.getUserId(), orderId);
+
+        log.info("超时未取车自动取消: orderNo={}, 退款={}", order.getOrderNo(), refunded);
+        return true;
+    }
+
+    /**
      * 平台关闭订单（不限归属）
      *
      * <p>与 {@link #cancel(Long, String)} 的差异只有两点：不校验 user_id、不自动扣信用分。

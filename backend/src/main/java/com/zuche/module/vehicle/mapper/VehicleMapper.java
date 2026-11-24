@@ -58,7 +58,18 @@ public interface VehicleMapper extends BaseMapper<Vehicle> {
             + "WHERE id = #{id} AND status = 1 AND deleted = 0")
     int lockForRent(@Param("id") Long id);
 
-    /** 未支付订单取消时释放车辆（只释放自己锁的那台，避免误放维修中的车） */
-    @Update("UPDATE vehicle SET status = 1 WHERE id = #{id} AND status = 2 AND deleted = 0")
+    /**
+     * 释放车辆（取消/关单时调用）
+     *
+     * <p>只把"因本单被锁"的车放回可租，且必须确认这辆车没有别的在途订单——
+     * 同一台车可能既有逾期未归的老单，又有刚取消的新单，直接置 1 会让车在
+     * "已租出"和"可租"之间打架，看板上也会出现"可租车却在租"的脏数据。</p>
+     */
+    @Update("UPDATE vehicle v SET v.status = 1 "
+            + "WHERE v.id = #{id} AND v.status = 2 AND v.deleted = 0 "
+            + "AND NOT EXISTS (SELECT 1 FROM order_item oi "
+            + "  JOIN lease_order o ON o.id = oi.order_id "
+            + "  WHERE oi.vehicle_id = v.id AND o.deleted = 0 "
+            + "  AND o.status IN ('IN_USE', 'WAIT_RETURN', 'OVERDUE'))")
     int releaseRent(@Param("id") Long id);
 }

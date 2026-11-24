@@ -85,4 +85,16 @@ public interface LeaseOrderMapper extends BaseMapper<LeaseOrder> {
             + "WHERE id = #{id} AND status = 'OVERDUE' AND deleted = 0 "
             + "AND (overdue_days IS NULL OR overdue_days < #{overdueDays})")
     int refreshOverdueDays(@Param("id") Long id, @Param("overdueDays") int overdueDays);
+
+    /**
+     * 超时未取车候选：已付款、还停在「待取车」，且计划取车日已经过了 N 天
+     *
+     * <p>用 {@code start_date < 截止日} 而不是 {@code <=}：取车日当天仍算履约窗口内，
+     * 只处理"过了取车日一整天还没来"的单，避免把当天要取车的用户误伤。</p>
+     */
+    @Select("SELECT * FROM lease_order "
+            + "WHERE deleted = 0 AND status = 'WAIT_PICKUP' "
+            + "AND start_date < #{deadline} "
+            + "ORDER BY start_date ASC, id ASC")
+    List<LeaseOrder> selectPickupTimeoutCandidates(@Param("deadline") LocalDate deadline);
 }
