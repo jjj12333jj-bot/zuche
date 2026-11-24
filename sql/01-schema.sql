@@ -703,8 +703,6 @@ INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, perm
 (22,  2,   '车辆详情',   'C', '/vehicles/:id',       'portal/VehicleDetail',  'vehicle:detail',      NULL,         2, 0, 1),
 (3,   0,   '我的订单',   'C', '/orders',             'user/OrderList',        'order:my',            'Tickets',    3, 1, 1),
 (4,   0,   '信用中心',   'C', '/credit',             'user/CreditCenter',     'credit:self',         'Medal',      4, 1, 1),
-(5,   0,   '我的收藏',   'C', '/favorites',          'user/Favorite',         'favorite:list',       'Star',       5, 1, 1),
-(6,   0,   '个人中心',   'C', '/profile',            'user/Profile',          'user:profile',        'User',       6, 1, 1),
 (10,  0,   '网点管理',   'M', '/store',              NULL,                    NULL,                  'OfficeBuilding', 10, 1, 1),
 (101, 10,  '网点概览',   'C', '/store/overview',     'store/Overview',        'store:overview',      'DataLine',   1, 1, 1),
 (102, 10,  '网点车辆',   'C', '/store/vehicles',     'store/VehicleManage',   'store:vehicle',       'Van',        2, 1, 1),
@@ -745,7 +743,7 @@ UPDATE sys_menu SET sort_no = sort_no + 1 WHERE parent_id = 20 AND id BETWEEN 20
 --    网点管理员能进「客户评价」只能回复，删除接口在后端限定 SYS_ADMIN
 INSERT INTO sys_role_menu (role_id, menu_id) SELECT 3, id FROM sys_menu;
 INSERT INTO sys_role_menu (role_id, menu_id)
-SELECT 1, id FROM sys_menu WHERE id IN (1, 2, 21, 22, 3, 4, 5, 6);
+SELECT 1, id FROM sys_menu WHERE id IN (1, 2, 21, 22, 3, 4);
 INSERT INTO sys_role_menu (role_id, menu_id)
 SELECT 2, id FROM sys_menu WHERE id IN (1, 3, 10, 101, 102, 103, 104, 105);
 
