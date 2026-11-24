@@ -101,7 +101,8 @@ const navs = [
   { path: '/', label: '首页' },
   { path: '/vehicles', label: '车辆租赁' },
   { path: '/orders', label: '我的订单' },
-  { path: '/credit', label: '信用中心' }
+  { path: '/credit', label: '信用中心' },
+  { path: '/profile', label: '个人中心' }
 ]
 
 const LEVEL_MAP = {
