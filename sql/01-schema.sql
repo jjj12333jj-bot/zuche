@@ -1,5 +1,5 @@
 -- =====================================================================
---  基于信用风控的微租车平台 —— 数据库结构（30 张表）
+--  基于信用风控的微租车平台 —— 数据库结构（27 张表）
 --  MySQL 8.0+ / InnoDB / utf8mb4_general_ci
 --  执行: mysql -h127.0.0.1 -P3306 -uroot -p123456 --default-character-set=utf8mb4 < sql/01-schema.sql
 --
@@ -16,9 +16,9 @@
 --      演示业务数据（品牌/车型/车辆/订单等）在 02-seed.sql。
 --
 --  模块划分:
---    一、系统权限与基础配置 6 张     二、车辆资产精细化管理 7 张
---    三、网点与调度管理     3 张     四、租赁订单与交易     6 张
---    五、信用风控           4 张     六、运营与系统审计     4 张
+--    一、系统权限与基础配置 6 张     二、车辆资产精细化管理 6 张
+--    三、网点与调度管理     3 张     四、租赁订单与交易     5 张
+--    五、信用风控           4 张     六、运营与系统审计     3 张
 -- =====================================================================
 
 -- ⚠️ 危险：下面这行会 DROP 整个 zuche 库，库中现有数据全部丢失。
@@ -346,7 +346,7 @@ CREATE TABLE dispatch_apply (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='跨网点调车申请表';
 
 -- =====================================================================
--- 模块四：租赁订单与交易（6 张）
+-- 模块四：租赁订单与交易（5 张）
 -- 订单主表 + 明细（一单多车）+ 支付流水 + 退款流水 + 评价 + 地址
 -- =====================================================================
 
@@ -484,30 +484,11 @@ CREATE TABLE order_evaluation (
   KEY idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='车辆评价表';
 
--- 21. 用户地址表（用于合同/发票寄送，本系统不接物流）
-DROP TABLE IF EXISTS user_address;
-CREATE TABLE user_address (
-  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
-  user_id     BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-  receiver    VARCHAR(50)  NOT NULL COMMENT '收件人',
-  phone       VARCHAR(20)  NOT NULL COMMENT '联系电话',
-  province    VARCHAR(50)  NOT NULL COMMENT '省',
-  city        VARCHAR(50)  NOT NULL COMMENT '市',
-  district    VARCHAR(50)  DEFAULT NULL COMMENT '区县',
-  detail      VARCHAR(200) NOT NULL COMMENT '详细地址',
-  is_default  TINYINT      NOT NULL DEFAULT 0 COMMENT '是否默认 1是 0否',
-  create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除 0否 1是',
-  PRIMARY KEY (id),
-  KEY idx_user (user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户地址表';
-
 -- =====================================================================
 -- 模块五：信用风控（4 张，核心特色）
 -- =====================================================================
 
--- 22. 信用规则与押金系数配置表
+-- 21. 信用规则与押金系数配置表
 --     rule_type=LEVEL  → 等级区间与押金系数
 --     rule_type=ACTION → 行为加减分（完成/按时归还/逾期/取消）
 --     两类配置都是「可后台修改」的业务参数，合并为一张规则表用 rule_type 区分，
@@ -535,7 +516,7 @@ CREATE TABLE credit_rule (
   KEY idx_min_score (min_score)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用规则与押金系数配置表';
 
--- 23. 信用分变动日志表（分数可复算；uk_dedup 保证同一订单同一事件只记一次）
+-- 22. 信用分变动日志表（分数可复算；uk_dedup 保证同一订单同一事件只记一次）
 DROP TABLE IF EXISTS credit_log;
 CREATE TABLE credit_log (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -556,7 +537,7 @@ CREATE TABLE credit_log (
   KEY idx_user_time (user_id, create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用分变动日志表';
 
--- 24. 信用申诉记录表（用户对扣分有异议时申诉，管理员复核后可调整分数）
+-- 23. 信用申诉记录表（用户对扣分有异议时申诉，管理员复核后可调整分数）
 DROP TABLE IF EXISTS credit_appeal;
 CREATE TABLE credit_appeal (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -580,7 +561,7 @@ CREATE TABLE credit_appeal (
   KEY idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用申诉记录表';
 
--- 25. 风控黑名单/预警表（逾期未还、严重违约自动/手工加入，影响下单与押金）
+-- 24. 风控黑名单/预警表（逾期未还、严重违约自动/手工加入，影响下单与押金）
 DROP TABLE IF EXISTS credit_blacklist;
 CREATE TABLE credit_blacklist (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -601,10 +582,10 @@ CREATE TABLE credit_blacklist (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='风控黑名单预警表';
 
 -- =====================================================================
--- 模块六：运营与系统审计（4 张）
+-- 模块六：运营与系统审计（3 张）
 -- =====================================================================
 
--- 26. 系统公告表
+-- 25. 系统公告表
 DROP TABLE IF EXISTS announcement;
 CREATE TABLE announcement (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -622,7 +603,7 @@ CREATE TABLE announcement (
   KEY idx_status_time (status, publish_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统公告表';
 
--- 27. 首页轮播图表
+-- 26. 首页轮播图表
 DROP TABLE IF EXISTS banner;
 CREATE TABLE banner (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -640,20 +621,7 @@ CREATE TABLE banner (
   KEY idx_sort (position, sort_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='首页轮播图表';
 
--- 28. 用户收藏表
-DROP TABLE IF EXISTS favorite;
-CREATE TABLE favorite (
-  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
-  user_id     BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
-  vehicle_id  BIGINT UNSIGNED NOT NULL COMMENT '车辆ID',
-  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '收藏时间',
-  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_user_vehicle (user_id, vehicle_id),
-  KEY idx_vehicle (vehicle_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户收藏表';
-
--- 29. 系统操作日志表（AOP 切面写入后台写操作）
+-- 27. 系统操作日志表（AOP 切面写入后台写操作）
 DROP TABLE IF EXISTS operation_log;
 CREATE TABLE operation_log (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',

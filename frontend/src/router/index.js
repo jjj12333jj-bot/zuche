@@ -77,18 +77,6 @@ const routes = [
         component: () => import('@/views/portal/Credit.vue'),
         meta: { title: '信用中心', requiresAuth: true }
       },
-      {
-        path: 'favorites',
-        name: 'Favorites',
-        component: () => import('@/views/portal/ComingSoon.vue'),
-        meta: { title: '我的收藏', requiresAuth: true }
-      },
-      {
-        path: 'profile',
-        name: 'Profile',
-        component: () => import('@/views/portal/ComingSoon.vue'),
-        meta: { title: '个人中心', requiresAuth: true }
-      }
     ]
   },
   {

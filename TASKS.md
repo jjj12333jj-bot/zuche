@@ -7,7 +7,7 @@
 - [x] 扫描仓库（`D:/zuche` 初始为空）
 - [x] 需求边界、ER 设计、接口清单、目录结构（`docs/`）
 - [x] 确认 MySQL 8.0.46 / 3306 / root / utf8mb4 可用
-- [x] **数据库重构为 29 张表**（6 大模块），`sql/01-schema.sql` 含建表 + 必要初始数据
+- [x] **数据库重构为 27 张表**（6 大模块），`sql/01-schema.sql` 含建表 + 必要初始数据
 - [x] `sql/02-seed.sql` 演示数据：9 品牌 / 24 车型 / 24 车 / 72 图 / 300 单 / 400 明细 / 540 支付 / 210 退款
 - [x] 一致性校验：信用分恒等式 0 异常，订单金额与明细 0 异常
 - [x] 后端骨架：pom、application.yml、统一 `Result`/`PageResult`、全局异常、JWT、`@RequireRole` 拦截器、Knife4j
