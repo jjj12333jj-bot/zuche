@@ -20,3 +20,8 @@ export function getMenus() {
 export function changePassword(data) {
   return request.put('/auth/password', data)
 }
+
+/** 修改个人资料（姓名/手机号/邮箱） */
+export function updateProfile(data) {
+  return request.put('/auth/profile', data)
+}

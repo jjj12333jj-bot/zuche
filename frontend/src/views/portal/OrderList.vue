@@ -32,6 +32,11 @@
                 {{ formatDate(o.startDate) }} 至 {{ formatDate(o.endDate) }} · {{ o.rentDays }} 天 ·
                 {{ o.vehicleCount }} 台 · {{ o.storeName }}
               </p>
+              <div v-if="o.depositRefundStatus && o.depositRefundStatus !== 'NONE'" class="refund-line">
+                <el-tag size="small" effect="plain" :type="o.depositRefundStatus === 'REFUNDED' ? 'success' : 'warning'">
+                  {{ o.depositRefundStatus === 'REFUNDED' ? '押金已退还' : '押金退还中' }}
+                </el-tag>
+              </div>
               <div class="credit-line">
                 <el-tag size="small" effect="plain" type="success">
                   下单信用 {{ o.creditLevelLabel || o.creditLevelSnapshot }}
@@ -305,5 +310,9 @@ onMounted(load)
     margin-left: 0;
     text-align: left;
   }
+}
+
+.refund-line {
+  margin-top: 6px;
 }
 </style>

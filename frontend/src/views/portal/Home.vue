@@ -141,6 +141,37 @@
       </div>
     </section>
 
+    <!-- 平台公告：后台「公告管理」发布后同步到这里，只读展示最新 3 条 -->
+    <section v-if="announcements.length" class="section">
+      <div class="page-container">
+        <div class="qa-head">
+          <h2 class="section-title">平台公告</h2>
+          <p class="section-sub">押金、逾期与网点通知，发布即同步</p>
+        </div>
+        <div class="notice-list">
+          <div v-for="item in announcements" :key="item.id" class="notice-item" @click="openNotice(item)">
+            <el-tag
+              size="small"
+              effect="plain"
+              :type="item.type === 'ACTIVITY' ? 'success' : item.type === 'RULE' ? 'warning' : 'info'"
+            >
+              {{ item.typeLabel }}
+            </el-tag>
+            <span class="notice-title">{{ item.title }}</span>
+            <span class="notice-time">{{ (item.publishTime || '').slice(0, 10) }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <el-dialog v-model="noticeVisible" :title="noticeDetail.title || '公告'" width="560px">
+      <div class="notice-meta">
+        {{ (noticeDetail.publishTime || '').slice(0, 10) }} · {{ noticeDetail.publisherName || '平台' }}
+        <span v-if="noticeDetail.viewCount != null">· 阅读 {{ noticeDetail.viewCount }}</span>
+      </div>
+      <p class="notice-content">{{ noticeDetail.content }}</p>
+    </el-dialog>
+
     <!-- 租车 Q&A：文案只写系统里真实存在的规则，不承诺发票/保险/客服 -->
     <section class="section">
       <div class="page-container">
@@ -187,6 +218,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { getVehicles, getVehicleOptions } from '@/api/vehicle'
 import { getBanners } from '@/api/banner'
+import { getAnnouncements, getAnnouncement } from '@/api/announcement'
 import { resolveImage } from '@/utils/image'
 import VehicleCard from '@/components/VehicleCard.vue'
 
@@ -197,6 +229,9 @@ const loadingHot = ref(false)
 const hotVehicles = ref([])
 const vehicleTotal = ref(0)
 const banners = ref([])
+const announcements = ref([])
+const noticeVisible = ref(false)
+const noticeDetail = ref({})
 
 const options = reactive({
   priceRange: { minPrice: null, maxPrice: null }
@@ -386,6 +421,17 @@ function formatMoney(value) {
   return n.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
+async function openNotice(item) {
+  noticeDetail.value = { ...item }
+  noticeVisible.value = true
+  try {
+    const res = await getAnnouncement(item.id)
+    noticeDetail.value = { ...item, ...res.data }
+  } catch (e) {
+    // 详情拉取失败时保留列表里的字段，弹窗仍可显示标题
+  }
+}
+
 async function loadData() {
   loadingHot.value = true
   try {
@@ -398,6 +444,12 @@ async function loadData() {
     hotVehicles.value = hotRes.data?.records || []
     vehicleTotal.value = hotRes.data?.total || 0
     banners.value = bannerRes.data || []
+    try {
+      const noticeRes = await getAnnouncements()
+      announcements.value = (noticeRes.data || []).slice(0, 3)
+    } catch (e) {
+      announcements.value = []
+    }
   } catch (e) {
     // 错误提示由 request 拦截器统一处理，首页保留静态内容
   } finally {
@@ -1031,5 +1083,57 @@ onUnmounted(() => {
   .hero-text p {
     font-size: 14px;
   }
+}
+
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.notice-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #fbf8f4;
+  border: 1px solid #e8dfd4;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.notice-item:hover {
+  border-color: #c4a882;
+  box-shadow: 0 2px 10px rgba(107, 74, 47, 0.08);
+}
+
+.notice-title {
+  flex: 1;
+  color: #2b221b;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notice-time {
+  color: #8a7b6b;
+  font-size: 12px;
+}
+
+.notice-meta {
+  color: #8a7b6b;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.notice-content {
+  margin: 0;
+  color: #3d332b;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
 }
 </style>

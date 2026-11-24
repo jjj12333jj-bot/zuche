@@ -74,6 +74,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="portal">前台首页</el-dropdown-item>
+                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
                 <el-dropdown-item command="refresh">刷新用户信息</el-dropdown-item>
                 <el-dropdown-item command="newTab" divided>新标签页登录其他账号</el-dropdown-item>
                 <el-dropdown-item command="logout">退出当前账号</el-dropdown-item>
@@ -120,6 +121,8 @@ const trail = computed(() => findMenuTrail(menuTree.value, route.path) || [])
 function onCommand(command) {
   if (command === 'portal') {
     router.push('/')
+  } else if (command === 'profile') {
+    router.push('/profile')
   } else if (command === 'refresh') {
     userStore
       .refresh()

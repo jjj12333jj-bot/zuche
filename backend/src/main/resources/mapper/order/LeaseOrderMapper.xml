@@ -22,6 +22,7 @@
         o.total_amount,
         o.credit_level_snapshot,
         o.deposit_coefficient,
+        o.deposit_refund_status,
         o.create_time,
         o.pay_time,
         (SELECT GROUP_CONCAT(oi.vehicle_name SEPARATOR ' / ')

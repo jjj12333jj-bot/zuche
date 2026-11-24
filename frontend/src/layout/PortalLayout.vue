@@ -54,6 +54,7 @@
                 <el-dropdown-menu>
                   <el-dropdown-item command="credit">信用中心</el-dropdown-item>
                   <el-dropdown-item command="orders">我的订单</el-dropdown-item>
+                  <el-dropdown-item command="profile">个人中心</el-dropdown-item>
                   <el-dropdown-item v-if="!userStore.isUser" command="workspace">
                     {{ userStore.isAdmin ? '系统管理台' : '网点工作台' }}
                   </el-dropdown-item>
@@ -134,6 +135,8 @@ function onCommand(command) {
         router.push('/login')
       })
       .catch(() => {})
+  } else if (command === 'profile') {
+    router.push('/profile')
   } else if (command === 'credit') {
     router.push('/credit')
   } else if (command === 'orders') {

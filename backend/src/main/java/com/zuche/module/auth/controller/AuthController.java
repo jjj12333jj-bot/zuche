@@ -2,6 +2,8 @@ package com.zuche.module.auth.controller;
 
 import com.zuche.common.Result;
 import com.zuche.module.auth.dto.LoginDTO;
+import com.zuche.module.auth.dto.PasswordChangeDTO;
+import com.zuche.module.auth.dto.ProfileUpdateDTO;
 import com.zuche.module.auth.dto.RegisterDTO;
 import com.zuche.module.auth.service.AuthService;
 import com.zuche.module.auth.vo.LoginVO;
@@ -15,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,5 +59,20 @@ public class AuthController {
     @GetMapping("/menus")
     public Result<List<MenuVO>> menus() {
         return Result.success(menuService.menuTree(UserContext.requireUserId()));
+    }
+
+    @Operation(summary = "修改个人资料", description = "仅姓名/手机号/邮箱；手机号唯一，用户名与角色不可改",
+            security = @SecurityRequirement(name = "Authorization"))
+    @PutMapping("/profile")
+    public Result<LoginVO> updateProfile(@RequestBody @Valid ProfileUpdateDTO dto) {
+        return Result.success("资料已更新", authService.updateProfile(UserContext.requireUserId(), dto));
+    }
+
+    @Operation(summary = "修改密码", description = "校验原密码，新密码 6-32 位且不能与原密码相同",
+            security = @SecurityRequirement(name = "Authorization"))
+    @PutMapping("/password")
+    public Result<Void> changePassword(@RequestBody @Valid PasswordChangeDTO dto) {
+        authService.changePassword(UserContext.requireUserId(), dto);
+        return Result.success("密码已修改，请重新登录", null);
     }
 }

@@ -49,6 +49,9 @@ public class OrderListVO {
     @Schema(description = "下单时押金系数快照")
     private BigDecimal depositCoefficient;
 
+    @Schema(description = "押金退还状态 NONE/PENDING/REFUNDED")
+    private String depositRefundStatus;
+
     private LocalDateTime createTime;
 
     private LocalDateTime payTime;

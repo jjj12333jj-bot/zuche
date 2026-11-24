@@ -18,6 +18,8 @@ public class LoginVO {
     private Long userId;
     private String username;
     private String realName;
+    private String phone;
+    private String email;
     private String avatar;
 
     @Schema(description = "角色码 USER/STORE_ADMIN/SYS_ADMIN，前端据此渲染菜单")

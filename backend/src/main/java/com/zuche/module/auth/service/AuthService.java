@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.zuche.common.BusinessException;
 import com.zuche.common.ResultCode;
 import com.zuche.module.auth.dto.LoginDTO;
+import com.zuche.module.auth.dto.PasswordChangeDTO;
+import com.zuche.module.auth.dto.ProfileUpdateDTO;
 import com.zuche.module.auth.dto.RegisterDTO;
 import com.zuche.module.auth.vo.LoginVO;
 import com.zuche.module.user.entity.SysUser;
@@ -118,6 +120,61 @@ public class AuthService {
         return buildLoginVO(user, roleOf(user.getId()), null);
     }
 
+    /**
+     * 修改个人资料（姓名 / 手机号 / 邮箱）
+     *
+     * <p>手机号做了唯一校验：登录虽用用户名，但手机号在注册时就是唯一的，
+     * 这里不校验会出现两个账号同手机号，后续做短信找回密码就分不清人。</p>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public LoginVO updateProfile(Long userId, ProfileUpdateDTO dto) {
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "账号不存在");
+        }
+        String phone = dto.getPhone().trim();
+        if (!phone.equals(user.getPhone()) && userMapper.countByPhone(phone) > 0) {
+            throw new BusinessException("该手机号已被其他账号使用");
+        }
+
+        SysUser update = new SysUser();
+        update.setId(userId);
+        update.setRealName(dto.getRealName().trim());
+        update.setPhone(phone);
+        update.setEmail(StringUtils.hasText(dto.getEmail()) ? dto.getEmail().trim() : null);
+        userMapper.updateById(update);
+
+        log.info("用户修改资料: id={}", userId);
+        return currentUser(userId);
+    }
+
+    /**
+     * 修改密码：先校验原密码，再确认两次新密码一致，且新旧不能相同
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, PasswordChangeDTO dto) {
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "账号不存在");
+        }
+        if (!encoder.matches(dto.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("原密码不正确");
+        }
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new BusinessException("两次输入的新密码不一致");
+        }
+        if (dto.getNewPassword().equals(dto.getOldPassword())) {
+            throw new BusinessException("新密码不能与原密码相同");
+        }
+
+        SysUser update = new SysUser();
+        update.setId(userId);
+        update.setPassword(encoder.encode(dto.getNewPassword()));
+        userMapper.updateById(update);
+
+        log.info("用户修改密码: id={}", userId);
+    }
+
     private String roleOf(Long userId) {
         String roleCode = userMapper.selectRoleCode(userId);
         return roleCode == null ? RoleCode.USER : roleCode;
@@ -129,6 +186,8 @@ public class AuthService {
                 .userId(user.getId())
                 .username(user.getUsername())
                 .realName(user.getRealName())
+                .phone(user.getPhone())
+                .email(user.getEmail())
                 .avatar(user.getAvatar())
                 .roleCode(roleCode)
                 .creditScore(user.getCreditScore())
